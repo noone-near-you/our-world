@@ -736,7 +736,7 @@ export const nodes: Record<string, Node> = {
   ww1: { steps: ["Five minutes? You said that three times already.", "…Okay, five. But I’m staying right here."], then: 'sleep_up' },
   ww2: { steps: ["No idea. Who cares?", "You’re warm and I’m not moving."], then: 'sleep_up' },
   ww3: { steps: ["Because I opened my eyes and you were the first thing I wanted to see.", "…And I was a little cold. Mostly cold."], then: 'sleep_up' },
-  sleep_up: { steps: [{ sleepy: 0 }, "Okay… up we go.", { pose: 'sit' }, "Look, the sun’s already coming up.", { tod: 'day' }, "I slept so well with you.", { scene: false }], then: 'hub' },
+  sleep_up: { steps: [{ sleepy: 0 }, "Okay… up we go.", { pose: 'sit' }, "Look, the sun’s already coming up.", { tod: 'morning' }, "I slept so well with you.", { scene: false }], then: 'hub' },
 
   // ====== GOING OUTSIDE: they ask each other about changing clothes (his tone follows her answer) -> pick the place -> beach outfits ======
   out_night: { steps: [
@@ -1154,7 +1154,7 @@ export const nodes: Record<string, Node> = {
 // ====== Side buttons (Hug / Kiss / Tease / Slap) at any time ======
 // Each button plays a short exchange: he reacts to what she just did, she answers with one of her options, he answers back,
 // then the story carries on exactly where it was. Add or edit variants freely: mk(id, hisLines, [[her label, his reply lines], ...]).
-const mk = (id: string, say: string[], replies: [string, string[]][]) => {
+const mk = (id: string, say: Step[], replies: [string, Step[]][]) => {
   nodes[id] = { steps: say, options: replies.map(([label], k) => ({ label, next: `${id}_${k}` })) };
   replies.forEach(([, r], k) => { nodes[`${id}_${k}`] = { steps: r, then: '@resume' }; });
 };

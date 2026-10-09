@@ -1,7 +1,7 @@
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 import * as THREE from 'three';
-import type { Sfx } from '../audio/audio';
+import { sfx, type Sfx } from '../audio/audio';
 import { Outlines } from '@react-three/drei';
 import { get, set, useGame, subscribe } from '../state/store';
 import { tk, tkx, HEADW, BODY, FX } from './anchors';

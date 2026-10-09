@@ -142,17 +142,17 @@ export const SFX_FILES: Record<string, { file: string; vol: number }> = {
   yummy:       { file: 'yummy.mp3',               vol: 0.85 }, // she likes the food
 
   // intimate breathing (her)
-  heavy:       { file: 'heavy_breathing.wav',     vol: 0.9 },  // while touching / fingers
+  heavy:       { file: 'heavy_breathing.wav',     vol: 1 },  // while touching / fingers
 
   // special
   sleeping:    { file: 'sleeping.mp3',       vol: 0.8 },
-  moan:        { file: 'moan.mp3',           vol: 0.90 },
+  moan:        { file: 'moan.mp3',           vol: 0.9 },
   splash:      { file: 'water_splash.mp3',   vol: 0.85 },
   wave:        { file: 'ocean_waves.mp3',    vol: 0.55 },
 };
 
 /** Adjust moan loudness here (0..1). Used in shower intimate moment. */
-export const MOAN_VOLUME = 0.90;
+export const MOAN_VOLUME =0.90;
 /** Moan during intimate blackout: full clip, then restart from 0 when it ends. */
 let moanEl: HTMLAudioElement | null = null;
 let moanActive = false;

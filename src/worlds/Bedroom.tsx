@@ -6,7 +6,7 @@ import { sfx, startHeavyBreath, stopHeavyBreath, type Sfx } from '../audio/audio
 import { get, set, useGame, subscribe } from '../state/store';
 import { registerActRunner } from '../story/engine';
 import type { Act } from '../story/script';
-import { anch, tk, tkx, HEADW } from './anchors';
+import { anch, tk, tkx, HEADW, BODY } from './anchors';
 import { BeachSet, PoolSet, SKY } from './BeachSet';
 
 import { ACTS, Person, mat, Ell, Cap, type Ctl, type V3 } from './rig';
@@ -452,39 +452,65 @@ function PoolClothes() {
     </group>
   );
 }
+/** Dense foam / soap bubbles covering naked bodies from shoulders to knees in the shower. */
 function BodySteamCover() {
   const naked = useGame(g => g.naked);
+  const world = useGame(g => g.world);
   const g = useRef<THREE.Group>(null!);
   const mats = useRef<THREE.MeshBasicMaterial[]>([]);
-  const puffs = useMemo(() => Array.from({ length: 18 }, (_, i) => ({
-    x: (i % 6 - 2.5) * 0.16,
-    z: ((i * 0.31) % 1 - 0.5) * 0.45,
-    phase: i * 0.37,
-    scale: 0.28 + (i % 4) * 0.06,
-    y0: 0.35 + (i % 5) * 0.12,
-  })), []);
+  // per character: layers from y≈1.25 (shoulders) down to y≈0.35 (knees)
+  const puffs = useMemo(() => {
+    const out: { who: 0 | 1; ox: number; oy: number; oz: number; phase: number; scale: number }[] = [];
+    for (let who = 0 as 0 | 1; who < 2; who = (who + 1) as 0 | 1) {
+      for (let row = 0; row < 7; row++) {
+        for (let col = 0; col < 5; col++) {
+          const i = row * 5 + col + who * 35;
+          out.push({
+            who,
+            ox: (col - 2) * 0.11,
+            oy: 0.35 + row * 0.14,
+            oz: ((col + row) % 3 - 1) * 0.08,
+            phase: i * 0.41,
+            scale: 0.22 + (i % 5) * 0.04,
+          });
+        }
+      }
+    }
+    return out;
+  }, []);
   useFrame(({ clock }) => {
     const grp = g.current; if (!grp) return;
-    const on = naked;
+    const on = naked && world === 'shower';
     grp.visible = on;
     if (!on) return;
     const t = clock.elapsedTime;
     puffs.forEach((p, i) => {
       const m = grp.children[i] as THREE.Mesh;
       if (!m) return;
-      m.position.set(p.x + Math.sin(t * 0.5 + p.phase) * 0.06, p.y0 + Math.sin(t * 0.7 + p.phase) * 0.08, p.z);
-      m.scale.setScalar(p.scale * (1 + 0.15 * Math.sin(t + p.phase)));
+      const bx = BODY[p.who].x;
+      const bz = BODY[p.who].z;
+      m.position.set(
+        bx + p.ox + Math.sin(t * 0.55 + p.phase) * 0.04,
+        p.oy + Math.sin(t * 0.65 + p.phase) * 0.05,
+        bz + p.oz + Math.cos(t * 0.4 + p.phase) * 0.03,
+      );
+      m.scale.setScalar(p.scale * (1 + 0.12 * Math.sin(t * 1.1 + p.phase)));
       const mat = mats.current[i];
-      if (mat) mat.opacity = 0.45 + 0.2 * Math.sin(t * 1.2 + p.phase);
+      if (mat) mat.opacity = 0.55 + 0.3 * (0.5 + 0.5 * Math.sin(t * 1.3 + p.phase));
     });
   });
-  // covers both characters mid-body (shoulders to knees area in stall)
   return (
-    <group ref={g} position={[0.05, 0.55, -0.5]} visible={false}>
-      {puffs.map((p, i) => (
-        <mesh key={i} position={[p.x, p.y0, p.z]}>
-          <sphereGeometry args={[1, 12, 10]} />
-          <meshBasicMaterial ref={el => { if (el) mats.current[i] = el; }} color="#eef4f8" transparent opacity={0} depthWrite={false} />
+    <group ref={g} visible={false}>
+      {puffs.map((_, i) => (
+        <mesh key={i}>
+          <sphereGeometry args={[1, 10, 8]} />
+          <meshBasicMaterial
+            ref={el => { if (el) mats.current[i] = el; }}
+            color="#f2f6fa"
+            transparent
+            opacity={0}
+            depthWrite={false}
+          />
         </mesh>
       ))}
     </group>

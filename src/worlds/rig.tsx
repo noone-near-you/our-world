@@ -305,8 +305,8 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
       ? {
           stand: [[-0.45, 1.15], [0.4, 1.15]],
           sit: [[-0.45, 1.15], [0.4, 1.15]],
-          wade: [[-0.25, -0.55], [0.35, -0.55]],
-          swim: [[-0.25, -0.55], [0.35, -0.55]],
+          wade: [[-0.42, -0.55], [0.48, -0.55]],
+          swim: [[-0.42, -0.55], [0.48, -0.55]],
         }
       : onPool
       ? {
@@ -329,7 +329,9 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
         };
     let gs = SPOT[g.pose]?.[i] ?? (onShower ? [x * 0.45, 1.15] : [x, -0.55]);
     // during hug/kiss in water: pull them almost together so arms actually wrap
-    if (onBeach && liveAct && (g.pose === 'wade' || g.pose === 'swim') && (c.act === 'hug' || c.act === 'kiss')) {
+    if (liveAct && (c.act === 'hug' || c.act === 'kiss') &&
+    ((onBeach && (g.pose === 'wade' || g.pose === 'swim')) ||
+     (onShower && (g.pose === 'wade' || g.pose === 'swim')))) {
       const midX = (SPOT[g.pose][0][0] + SPOT[g.pose][1][0]) * 0.5;
       const closeX = i === 0 ? midX - 0.22 : midX + 0.22;
       gs = [closeX, SPOT[g.pose][i][1]];
@@ -399,7 +401,7 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
     let walkB = false, faceYaw = 0;
     if ((i === 0 || w.stage === 2) && !bedP) { const dx = gs[0] - rp.x, dz = gs[1] - rp.z, dist = Math.hypot(dx, dz);
       // short slide on dry ground; also allow slide during beach hug/kiss so they close the gap
-      const actClose = onBeach && liveAct && (c.act === 'hug' || c.act === 'kiss');
+      const actClose = liveAct && (c.act === 'hug' || c.act === 'kiss') && (onBeach || onShower);
       const canSlide = dist < 1.2 && w.stage === 2 && (actClose || (!onBeach && !(onPool && (Math.abs(rp.x) < 4.0 && rp.z > -3.95 && rp.z < 0.9))));
       if (dist > 0.03) {
         if (canSlide) {

@@ -26,11 +26,11 @@ export interface Game {
   musicWorld: string;
   musicSlotByWorld: Record<string, number>;
   musicPlaying: boolean;         // a song is actively playing (for UI pulse)
-  intro: 'gate' | 'welcome' | 'story' | 'done';
+  intro:  'earphone' | 'gate' | 'welcome' | 'story' | 'done';
   paused: boolean;
   openSongPanel: boolean;  // opening sequence phase
 }
-let s: Game = { started: false, soundOn: false, title: '', line: '', kind: 'say', lineKey: 0, options: [], busy: false, tod: 'afternoon', gfHere: false, gfSeated: false, world: 'bedroom', fade: 0, lamp: true, pose: 'sit', sleepy: 0, scene: false, caption: '', outfit: 'casual', tone: 'soft', beachDone: false, steam: false, flowerInHair: false, showerOn: false, naked: false, splash: false, clothSeed: Math.floor(Math.random() * 1e9), musicMuted: false, musicWanted: false, musicSlot: 0, musicWorld: 'bedroom', musicSlotByWorld: {}, musicPlaying: false, intro: 'gate', paused: false, openSongPanel: false };
+let s: Game = { started: false, soundOn: false, title: '', line: '', kind: 'say', lineKey: 0, options: [], busy: false, tod: 'afternoon', gfHere: false, gfSeated: false, world: 'bedroom', fade: 0, lamp: true, pose: 'sit', sleepy: 0, scene: false, caption: '', outfit: 'casual', tone: 'soft', beachDone: false, steam: false, flowerInHair: false, showerOn: false, naked: false, splash: false, clothSeed: Math.floor(Math.random() * 1e9), musicMuted: false, musicWanted: false, musicSlot: 0, musicWorld: 'bedroom', musicSlotByWorld: {}, musicPlaying: false, intro: 'earphone', paused: false, openSongPanel: false };
 const subs = new Set<() => void>();
 export const get = () => s;
 export const set = (p: Partial<Game>) => { s = { ...s, ...p }; subs.forEach(f => f()); };

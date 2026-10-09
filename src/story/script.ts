@@ -1313,8 +1313,49 @@ export const nodes: Record<string, Node> = {
     { sfx: 'breath' }, "Water’s still warm.", "I’m not ready to leave you yet.", "Whenever you want to step out… just say." ],
     options: [
       { label: "“One more kiss.”", next: 'sh_kiss2' },
+      { label: "“Let’s stay under the water again.”", next: 'sh_replay' },
+      { label: "“Let’s go somewhere.”", next: 'where2' },
       { label: "“Let’s go back to bed.”", next: 'sh_tobed' },
       { label: "“Stay a little more.”", next: 'sh_stay' } ] },
+    // shower replay
+  sh_replay: { steps: [
+    { sfx: 'heh' },
+    "Back under the water already?",
+    { sfx: 'chuckle' },
+    "I’m not saying no…",
+    "Come on. Closer this time." ], then: 'sh_enter' },
+
+  // same-world “again?” bridges
+  again_kitchen: { steps: [
+    { sfx: 'heh' },
+    "We’re already in the kitchen…",
+    "You wanna do it again?",
+    { sfx: 'chuckle' },
+    "Okay. Round two." ], then: 'k_replay' },
+  again_garden: { steps: [
+    { sfx: 'heh' },
+    "Still the garden?",
+    "You wanna stay and do this again?",
+    { sfx: 'sigh' },
+    "I’m not complaining." ], then: 'gd_replay' },
+  again_beach: { steps: [
+    { sfx: 'heh' },
+    "We’re already at the beach…",
+    "You wanna do it again?",
+    { sfx: 'chuckle' },
+    "Ocean’s still waiting." ], then: 'bc_replay' },
+  again_pool: { steps: [
+    { sfx: 'heh' },
+    "We’re already at the pool…",
+    "You wanna go in again?",
+    { sfx: 'chuckle' },
+    "I’m right behind you." ], then: 'pl_replay' },
+  again_shower: { steps: [
+    { sfx: 'heh' },
+    "We’re already under the water…",
+    "You wanna do it again?",
+    { sfx: 'mm' },
+    "Come closer then." ], then: 'sh_replay' },
   sh_tobed: { steps: [{ sfx: 'heavy_stop' }, { sfx: 'uhh' }, "Okay. Towels. Then bed.", { go: 'bedroom' }], then: 'arrive_bedroom' },
   sh_cuddle: { steps: [{ sfx: 'heavy_stop' }, "Deal.", "We dry off… then the blanket is ours.", { go: 'bedroom' }], then: 'cuddle' },
   sh_stay: { steps: [{ sfx: 'heavy_stop' }, { act: 'hug' }, { sfx: 'heh' }, "Gladly.", "Steam, water, you… I’m not complaining."], then: 'hub' },

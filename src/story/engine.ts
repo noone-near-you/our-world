@@ -202,7 +202,22 @@ export async function play(id: string): Promise<void> {
   if (n.then) return play(n.then);
   set({ options: n.options ?? [] });
 }
+
+/** Same-world pick (not bedroom) → "again?" dialogue → that world's replay node. */
+const WORLD_REPLAY: Record<string, string> = {
+  kitchen: 'k_replay',
+  garden: 'gd_replay',
+  beach: 'bc_replay',
+  pool: 'pl_replay',
+  shower: 'sh_replay',
+};
 export async function goWorld(id: string, _opts?: { silent?: boolean }) {
+    // same world (not bedroom) → again + replay instead of re-arriving
+  if (get().world === id && id !== 'bedroom' && WORLD_REPLAY[id] && get().gfHere) {
+    token++; release?.();
+    await play(`again_${id}`);
+    return;
+  }
   if (!READY.includes(id)) return;
   token++; release?.();
   const fadeSafety = window.setTimeout(() => set({ fade: 0 }), 2500);
@@ -305,8 +320,14 @@ export async function pick(o: Opt) {
   set({ options: [] });
   if (o.world === 'beach' && get().outfit !== 'beach' && get().outfit !== 'swim') return play('out_ask');
   if (o.world) {
-    if (READY.includes(o.world)) await goWorld(o.world);
-    else await play(`world_${o.world}`);
+    if (READY.includes(o.world)) {
+      // already in this world (not bedroom) → tease + replay path
+      if (get().world === o.world && o.world !== 'bedroom' && WORLD_REPLAY[o.world]) {
+        await play(`again_${o.world}`);
+        return;
+      }
+      await goWorld(o.world);
+    } else await play(`world_${o.world}`);
     return;
   }
   await play(o.next ?? 'hub');

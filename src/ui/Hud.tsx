@@ -233,6 +233,17 @@ function Intro() {
     setStoryN(STORY.length);
   };
 
+  // 2) Earphones warning (phone + PC)
+  if (intro === 'earphone') {
+    return (
+      <div className="intro-screen pre-screen" onClick={() => set({ intro: 'gate' })}>
+        <div className="pre-icon warn-icon" aria-hidden>⚠️</div>
+        <p className="pre-title">Please plug in earphones</p>
+        <p className="pre-sub">This experience uses soft audio and intimate sounds.<br />Headphones are recommended</p>
+        <p className="intro-hint">tap to continue</p>
+      </div>
+    );
+  }
   if (intro === 'gate') {
     return (
       <div className="gate intro-gate">

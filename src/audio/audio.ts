@@ -335,32 +335,18 @@ export function sfx(name: Sfx) {
       break;
     case 'hug':
       // both of them react on a hug
-      playSfxOr('hug', 0.8, () => {
-        vocal(155, 'hum', 0.7, 0.24, 0);
-        vocal(300, 'mm', 0.45, 0.16, 0.15);
-        tone(140, 100, 0.5, 0.07);
-      });
+      playSfxOr('hug', 0.8, () => {});
       setTimeout(() => playSfxOr('hug_girl', 0.85, () => { vocal(320, 'mm', 0.4, 0.14); }), 180);
       break;
     case 'kiss':
-      playSfxOr('kiss', 0.8, () => {
-        burst(0.06, 0.16, 900);
-        burst(0.05, 0.12, 600, 0.04);
-        tone(320, 180, 0.12, 0.06, 'sine');
-        vocal(180, 'mm', 0.2, 0.12, 0.12);
-      });
+      playSfxOr('kiss', 0.8, () => {});
       break;
     case 'tease':
-      playSfxOr('tease', 0.6, () => {
-        vocal(155, 'heh', 0.16, 0.18);
-        vocal(320, 'uh', 0.28, 0.16, 0.18);
-      });
+      playSfxOr('tease', 0.6, () => {});
       break;
     case 'poke': tone(420, 640, 0.08, 0.1, 'triangle'); break;
     case 'slap':
-      playSfxOr('slap', 0.7, () => {
-        burst(0.08, 0.3, 1800); tone(180, 60, 0.1, 0.12, 'square'); vocal(280, 'oh', 0.18, 0.14, 0.06);
-      });
+      playSfxOr('slap', 0.7, () => {});
       break;
     case 'wave': tone(660, 880, 0.12, 0.07); tone(880, 990, 0.14, 0.07, 'sine', 0.14); break;
     case 'laugh':

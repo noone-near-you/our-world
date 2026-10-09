@@ -112,7 +112,7 @@ export const SFX_FILES: Record<string, { file: string; vol: number }> = {
   step:        { file: 'step.mp3',           vol: 0.5 },   // optional; procedural if missing
 
   // male (boyfriend) — use freely so talk feels real
-  hmm:         { file: 'male_mm_hmm.mp3',    vol: 0.8 },   // soft agreement / warmth
+  hmm:         { file: 'male_mm_hmm.mp3',    vol: 0.75 },   // soft agreement / warmth
   hm:          { file: 'male_mm_hmm.mp3',    vol: 0.65 },  // quieter nod
   mm:          { file: 'male_mm_hmm.mp3',    vol: 0.75 },  // after kiss / soft
   agree:       { file: 'male_mm_hmm.mp3',    vol: 0.7 },
@@ -120,8 +120,8 @@ export const SFX_FILES: Record<string, { file: string; vol: number }> = {
   chuckle:     { file: 'man_laugh.mp3',      vol: 0.7 },   // amused
   boylaugh:    { file: 'man_laugh.mp3',      vol: 0.75 },
   laugh:       { file: 'man_laugh.mp3',      vol: 0.7 },
-  uhh:         { file: 'male_uhh.mp3',       vol: 0.8 },   // surprised / confused "huh?"
-  oh:          { file: 'male_uhh.mp3',       vol: 0.65 },
+  uhh:         { file: 'male_uhh.mp3',       vol: 0.30 },   // surprised / confused "huh?"
+  oh:          { file: 'male_uhh.mp3',       vol: 0.20 },
 
   // female (girlfriend) — varied reactions; giggle sparingly so she doesn't spam laugh
   hehe:        { file: 'girl-giggle.mp3',    vol: 0.75 },
@@ -132,9 +132,9 @@ export const SFX_FILES: Record<string, { file: string; vol: number }> = {
   shy:         { file: 'girl_scared.mp3',    vol: 0.75 },  // nervous / startled
   sigh:        { file: 'girl_sigh.mp3',      vol: 0.75 },  // content / soft sigh
   breath:      { file: 'girl_sigh.mp3',      vol: 0.55 },  // soft breath
-  female_mm:   { file: 'female_mm.mp3',      vol: 0.65 },  // short soft laugh — rare
-  foh:         { file: 'female_oh.mp3',      vol: 0.8 },   // soft "oh" — surprised / touched
-  fuhh:        { file: 'female_uhh.mp3',     vol: 0.8 },   // soft "uhh" — hesitant / thinking
+  female_mm:   { file: 'female_mm.mp3',      vol: 0.60 },  // short soft laugh — rare
+  foh:         { file: 'female_oh.mp3',      vol: 0.75 },   // soft "oh" — surprised / touched
+  fuhh:        { file: 'female_uhh.mp3',     vol: 0.75 },   // soft "uhh" — hesitant / thinking
 
   // kitchen
   cooking:     { file: 'cooking_sound.mp3',       vol: 0.7 },  // pan / stove (not chopping)
@@ -142,24 +142,72 @@ export const SFX_FILES: Record<string, { file: string; vol: number }> = {
   yummy:       { file: 'yummy.mp3',               vol: 0.85 }, // she likes the food
 
   // intimate breathing (her)
-  heavy:       { file: 'heavy_breathing.wav',     vol: 0.7 },  // while touching / fingers
+  heavy:       { file: 'heavy_breathing.wav',     vol: 0.9 },  // while touching / fingers
 
   // special
-  sleeping:    { file: 'sleeping.mp3',       vol: 0.6 },
-  moan:        { file: 'moan.mp3',           vol: 0.85 },
+  sleeping:    { file: 'sleeping.mp3',       vol: 0.8 },
+  moan:        { file: 'moan.mp3',           vol: 0.90 },
   splash:      { file: 'water_splash.mp3',   vol: 0.85 },
   wave:        { file: 'ocean_waves.mp3',    vol: 0.55 },
 };
 
 /** Adjust moan loudness here (0..1). Used in shower intimate moment. */
-export const MOAN_VOLUME = 0.85;
+export const MOAN_VOLUME = 0.90;
+let moanEl: HTMLAudioElement | null = null;
+let moanActive = false;
 
+function playMoanOnce() {
+  if (!moanActive || !get().soundOn) return;
+  try {
+    if (moanEl) {
+      try { moanEl.pause(); moanEl.onended = null; moanEl.src = ''; } catch { /* */ }
+    }
+    const meta = SFX_FILES.moan;
+    const el = new Audio(`/sfx/${meta?.file ?? 'moan.mp3'}`);
+    el.volume = Math.min(1, meta?.vol ?? MOAN_VOLUME);
+    el.onended = () => {
+      if (moanActive) playMoanOnce(); // repeat
+    };
+    el.onerror = () => {
+      if (moanActive) setTimeout(() => playMoanOnce(), 400);
+    };
+    moanEl = el;
+    unlockAudio();
+    const p = el.play();
+    if (p && typeof p.catch === 'function') {
+      p.catch(() => {
+        if (moanActive) setTimeout(() => playMoanOnce(), 400);
+      });
+    }
+  } catch { /* */ }
+}
+
+export function startMoanLoop() {
+  stopMoanLoop();
+  if (!get().soundOn) return;
+  moanActive = true;
+  playMoanOnce();
+}
+
+export function stopMoanLoop() {
+  moanActive = false;
+  if (moanEl) {
+    try {
+      moanEl.onended = null;
+      moanEl.onerror = null;
+      moanEl.pause();
+      moanEl.currentTime = 0;
+      moanEl.src = '';
+    } catch { /* */ }
+    moanEl = null;
+  }
+}
 
 /**
  * Procedural footstep — no file needed.
  * Soft indoor step: light heel + sole scrape (works for her walk-in).
  */
-function footstep(vol = 0.55) {
+function footstep(vol = 0.28) {
   if (!ctx) return;
   const t = ctx.currentTime;
   // light heel (slightly higher = lighter / feminine step)
@@ -204,8 +252,9 @@ function footstep(vol = 0.55) {
   }
 }
 
-/** Prefer public/sfx/<name>.mp3; if missing, run fallback(). */
-function playSfxOr(name: string, vol: number, fallback: () => void) {
+/** Prefer public/sfx/<name>.mp3; if missing, run fallback().
+ *  Optional maxMs: stop the clip early so it matches short animations (e.g. splash). */
+function playSfxOr(name: string, vol: number, fallback: () => void, maxMs?: number) {
   const meta = SFX_FILES[name];
   const file = meta?.file ?? `${name}.mp3`;
   const v = meta?.vol ?? vol;
@@ -221,6 +270,12 @@ function playSfxOr(name: string, vol: number, fallback: () => void) {
     const p = el.play();
     if (p && typeof p.catch === 'function') p.catch(fail);
     setTimeout(() => { if (!done) fail(); }, 320);
+    // cut long mp3s so they end with the visual (splash droplets last ~0.9–1.2s)
+    if (maxMs && maxMs > 0) {
+      setTimeout(() => {
+        try { el.pause(); el.currentTime = 0; el.src = ''; } catch { /* */ }
+      }, maxMs);
+    }
   } catch { fallback(); }
 }
 
@@ -276,7 +331,7 @@ export function sfx(name: Sfx) {
     case 'step':
       // always procedural — no step.mp3 required; clear steps for her walk-in
       getAudioCtx();
-      footstep(0.55);
+      footstep(0.28);
       break;
     case 'hug':
       // both of them react on a hug
@@ -367,11 +422,11 @@ export function sfx(name: Sfx) {
     case 'chime': tone(880, 880, 0.55, 0.06); tone(1320, 1320, 0.65, 0.045, 'sine', 0.12); break;
     case 'song': break;
     case 'splash':
-      // water splash — aligned with splash animation bursts
+      // water splash — cut at ~1.1s so it ends with the droplet animation (mp3 is much longer)
       playSfxOr('splash', 0.85, () => {
         burst(0.18, 0.42, 1800); burst(0.12, 0.3, 2400, 0.05);
         tone(400, 180, 0.2, 0.09, 'sawtooth'); burst(0.25, 0.2, 900, 0.1);
-      });
+      }, 1100);
       break;
     case 'wave':
       playSfxOr('wave', 0.55, () => {

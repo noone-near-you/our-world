@@ -19,7 +19,64 @@ let wantedWorld = 'bedroom';
 let enabled = true;
 let showerWaterOn = false; // off until they turn shower on
 
-const VOL = 0.22; // mild
+const VOL = 0.25; // mild
+
+/** Preloaded ambient Audio elements keyed by resolved URL — cuts CDN start delay */
+const ambientCache = new Map<string, HTMLAudioElement>();
+const AMBIENT_WORLDS = ['bedroom', 'kitchen', 'garden', 'beach', 'pool', 'shower'];
+
+function waitReady(el: HTMLAudioElement, ms = 2000): Promise<void> {
+  if (el.readyState >= 3) return Promise.resolve();
+  return new Promise(resolve => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(t);
+      el.removeEventListener('canplaythrough', finish);
+      el.removeEventListener('canplay', finish);
+      resolve();
+    };
+    const t = window.setTimeout(finish, ms);
+    el.addEventListener('canplaythrough', finish);
+    el.addEventListener('canplay', finish);
+  });
+}
+
+/** Warm CDN cache for one world's ambient (and beach wave sfx). */
+export function preloadAmbient(world: string) {
+  const path = mediaUrl(`/ambient/${world}/ambient.mp3`);
+  if (!ambientCache.has(path)) {
+    try {
+      const el = new Audio();
+      el.preload = 'auto';
+      el.crossOrigin = 'anonymous';
+      el.loop = true;
+      el.src = path;
+      el.load();
+      ambientCache.set(path, el);
+    } catch { /* */ }
+  }
+  // beach ocean waves live in public/sfx (shipped with the game), NOT on the music CDN
+  if (world === 'beach') {
+    const waveSrc = '/sfx/ocean_waves.mp3';
+    if (!ambientCache.has(waveSrc)) {
+      try {
+        const el = new Audio();
+        el.preload = 'auto';
+        el.loop = true;
+        el.src = waveSrc;
+        el.load();
+        ambientCache.set(waveSrc, el);
+      } catch { /* */ }
+    }
+  }
+}
+
+/** Preload every world's ambient so the first world hop isn't laggy on CDN. */
+export function preloadAllAmbients() {
+  for (const w of AMBIENT_WORLDS) preloadAmbient(w);
+}
 
 function targetVol() {
   if (!get().soundOn || !enabled) return 0;
@@ -48,6 +105,8 @@ function playFile(world: string) {
     return;
   }
   stopFile();
+  // warm this world + keep others buffering in background
+  preloadAmbient(world);
   const path = mediaUrl(`/ambient/${world}/ambient.mp3`);
   const a = new Audio();
   a.loop = true;
@@ -61,11 +120,15 @@ function playFile(world: string) {
     if (audio === a) { audio = null; currentWorld = ''; }
   };
   a.onplaying = () => applyVol();
-  const p = a.play();
-  if (p && typeof p.catch === 'function') p.catch(() => { /* autoplay / missing */ });
   audio = a;
   currentWorld = world;
-  setTimeout(applyVol, 100);
+  // wait briefly for CDN buffer so ambient starts cleanly
+  waitReady(a, 1800).then(() => {
+    if (audio !== a || currentWorld !== world) return;
+    const p = a.play();
+    if (p && typeof p.catch === 'function') p.catch(() => { /* autoplay / missing */ });
+    setTimeout(applyVol, 80);
+  });
   startWaveLoop(world);
 }
 
@@ -105,14 +168,22 @@ function startWaveLoop(world: string) {
   stopWaveLoop();
   if (world !== 'beach' || !get().soundOn) return;
   try {
-    const el = new Audio('/sfx/ocean_waves.mp3');
+    // local public/sfx — not on CDN (MEDIA_BASE only has music + ambient)
+    const waveSrc = '/sfx/ocean_waves.mp3';
+    preloadAmbient('beach'); // ensure wave is in cache
+    const el = new Audio();
     el.loop = true;
     el.preload = 'auto';
     el.volume = 0;
-    el.play().catch(() => {});
+    el.src = waveSrc;
     oceanEl = el;
     oceanVol = 0;
     oceanTarget = 0.25; // soft when just on the beach
+    waitReady(el, 1500).then(() => {
+      if (oceanEl !== el) return;
+      el.play().catch(() => {});
+      if (oceanRaf == null) oceanRaf = requestAnimationFrame(oceanTick);
+    });
     oceanRaf = requestAnimationFrame(oceanTick);
   } catch { /* */ }
 }
@@ -193,6 +264,8 @@ export function setShowerWater(on: boolean) {
 
 export function setAmbientWorld(world: string) {
   wantedWorld = world;
+  // always warm cache (even before sound is on) so first play is instant on CDN
+  preloadAmbient(world);
   if (!get().soundOn || !enabled) return;
   playFile(world);
   // water only when shower is on in shower world
@@ -223,6 +296,8 @@ export function setAmbientEnabled(on: boolean) {
 }
 
 export function startAmbientIfNeeded() {
+  // kick off CDN preload for every world as soon as sound is enabled
+  preloadAllAmbients();
   if (get().soundOn && enabled) playFile(wantedWorld || get().world || 'bedroom');
 }
 

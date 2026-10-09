@@ -461,7 +461,19 @@ export const nodes: Record<string, Node> = {
     { go: 'bedroom' } ], then: 'cuddle' },
   k_close: { steps: [
     "I could stay in this kitchen with you forever.",
-    "But whenever you’re ready… just say the word." ], then: 'hub' },
+    "But whenever you’re ready… just say the word." ],
+    options: [
+      { label: "“Let’s cook something again.”", next: 'k_replay' },
+      { label: "“Kiss me.”", next: 'hub_kiss' },
+      { label: "“Let’s go somewhere.”", next: 'where2' },
+      { label: "“I’m sleepy… let’s sleep.”", next: 'sleep_ask' } ] },
+  // kitchen replay — different from the first cook
+  k_replay: { steps: [
+    { sfx: 'heh' },
+    "Round two already?",
+    { sfx: 'chuckle' },
+    "Okay… but this time you pick faster.",
+    "I’m hungrier for you than the food." ], then: 'k_choose' },
   arrive_garden: { steps: [
     { pose: 'sit' },
     "Sit with me.",
@@ -562,12 +574,20 @@ export const nodes: Record<string, Node> = {
     options: [
       { label: "“One more flower.”", next: 'gd_one_more' },
       { label: "“Stay like this.”", next: 'gd_stay' },
+      { label: "“Let’s sit here a bit more.”", next: 'gd_replay' },
       { label: "“Take me somewhere else.”", next: 'gd_else' },
       { label: "“Special cuddle later?”", next: 'gd_cuddle' } ] },
   gd_one_more: { steps: [{ act: 'flower' }, { sfx: 'giggle' }, { sfx: 'uhh' }, "There. Last one. Promise."], then: 'hub' },
   gd_stay: { steps: [{ act: 'hug' }, { sfx: 'heh' }, { sfx: 'mm' }, "Then we stay.", { thought: "No rush. Just her, the bench, and the flowers." }], then: 'hub' },
   gd_else: { steps: ["Anywhere you want."], then: 'where2' },
   gd_cuddle: { steps: ["Deal.", "Garden first… then the blanket.", { go: 'bedroom' }], then: 'cuddle' },
+  // garden replay — different soft lines
+  gd_replay: { steps: [
+    { sfx: 'heh' },
+    "Still not ready to leave the bench?",
+    { sfx: 'sigh' },
+    "Good. Neither am I.",
+    "Come closer. Different flowers this time… same you." ], then: 'gd_bench' },
   arrive_beach: { route: g => g.beachDone ? 'bc_back' : undefined, steps: [
     { pose: 'stand' },
     "Listen to the waves…",
@@ -610,14 +630,30 @@ export const nodes: Record<string, Node> = {
     { sfx: 'uhh' },
     "Or just stay on the sand with me?" ],
     options: [
-      { label: "“Let’s go in a little.”", next: 'bc_wade' },
+      { label: "“Let’s go in a little.”", next: 'bc_change' },
       { label: "“Stay here.”", next: 'bc_stay' },
       { label: "“Take me somewhere else.”", next: 'where2' } ] },
+  // stand up, talk about changing, switch to swimwear, then walk into the water
+  bc_change: { steps: [
+    { pose: 'stand' },
+    { sfx: 'heh' },
+    "Okay… but we’re still in our beach clothes.",
+    { sfx: 'shy' },
+    "I’m not swimming in this shirt.",
+    "Come on — bikini and trunks. Just for the water." ], then: 'bc_undress' },
+  bc_undress: { steps: [
+    { set: { outfit: 'swim', naked: false, caption: 'a moment later… clothes left on the loungers' } },
+    { wait: 400 },
+    { sfx: 'breath' },
+    "There. Better.",
+    { sfx: 'giggle' },
+    "Your turn to stare is over. Let’s go." ], then: 'bc_wade' },
   bc_wade: { steps: [
     { pose: 'wade' },
     { sfx: 'shy' },
     "Careful… the sand drops off a little.",
     { sfx: 'uhh' },
+    "Water’s up to our knees already.",
     "I’ve got you.",
     { act: 'hug' },
     "Stay close." ],
@@ -625,6 +661,7 @@ export const nodes: Record<string, Node> = {
       { label: "“Kiss me in the water.”", next: 'bc_wkiss' },
       { label: "“Splash me.”", next: 'bc_splash' },
       { label: "“Hold me.”", next: 'bc_whug' },
+      { label: "“Go a little deeper.”", next: 'bc_inmore' },
       { label: "“Back to the sand.”", next: 'bc_stay' } ] },
   bc_wkiss: { steps: [
     { act: 'kiss' },
@@ -632,34 +669,66 @@ export const nodes: Record<string, Node> = {
     { sfx: 'foh' },
     "Cold water… warm you.",
     { act: 'hug' },
-    "Don’t let go." ], then: 'bc_inmore' },
+    "Don’t let go." ], then: 'bc_wopts' },
   bc_whug: { steps: [
     { act: 'hug' },
     { sfx: 'hmm' },
-    "Just the waves… and you against me." ], then: 'bc_inmore' },
+    "Just the waves… and you against me." ], then: 'bc_wopts' },
   bc_splash: { steps: [
     { set: { splash: true } },
     { sfx: 'heh' },
     "Hey—!",
     { set: { splash: true } },
     { sfx: 'giggle' },
-    "Okay… you’re going under for that." ], then: 'bc_inmore' },
-  bc_inmore: { steps: [
-    { pose: 'swim' },
-    { act: 'hug' },
-    "Deeper… still with me.",
+    "Okay… you’re going under for that." ], then: 'bc_wopts' },
+  bc_wopts: { steps: [
     { sfx: 'sigh' },
-    "I could stay in this ocean with you forever." ],
+    "Still good here… or deeper?" ],
     options: [
       { label: "“Kiss me again.”", next: 'bc_wkiss' },
       { label: "“Splash you back.”", next: 'bc_splash' },
+      { label: "“Go a little deeper.”", next: 'bc_inmore' },
       { label: "“Back to the sand.”", next: 'bc_stay' } ] },
+  bc_inmore: { steps: [
+    { pose: 'swim' },
+    { sfx: 'uhh' },
+    "Deeper… water’s at our waists now.",
+    { act: 'hug' },
+    { sfx: 'sigh' },
+    "I could stay in this ocean with you forever." ],
+    options: [
+      { label: "“Kiss me again.”", next: 'bc_dkiss' },
+      { label: "“Splash you back.”", next: 'bc_dsplash' },
+      { label: "“Hold me.”", next: 'bc_dhug' },
+      { label: "“Back to the sand.”", next: 'bc_stay' } ] },
+  bc_dkiss: { steps: [
+    { act: 'kiss' },
+    { sfx: 'mm' },
+    { sfx: 'foh' },
+    "Salt on your lips… I like it." ], then: 'bc_inmore' },
+  bc_dhug: { steps: [
+    { act: 'hug' },
+    { sfx: 'hmm' },
+    "Waves against us. You against me." ], then: 'bc_inmore' },
+  bc_dsplash: { steps: [
+    { set: { splash: true } },
+    { sfx: 'heh' },
+    "Hey—!",
+    { set: { splash: true } },
+    { sfx: 'giggle' },
+    "You’re soaked. Worth it." ], then: 'bc_inmore' },
   bc_stay: { steps: [
     { pose: 'sit' },
+    { set: { outfit: 'beach', naked: false } },
     { sfx: 'heh' },
-    "Okay. We stay.",
+    "Okay. Back to the loungers.",
     { sfx: 'sigh' },
-    "Just the waves… and us." ], then: 'hub' },
+    "Just the waves… and us." ],
+    options: [
+      { label: "“Let’s go in the ocean again.”", next: 'bc_replay' },
+      { label: "“Kiss me.”", next: 'bc_kiss' },
+      { label: "“Let’s go somewhere else.”", next: 'where2' },
+      { label: "“I’m sleepy… let’s sleep.”", next: 'sleep_ask' } ] },
   bc_back: { steps: [
     { pose: 'sit' },
     "Back at the beach.",
@@ -668,8 +737,16 @@ export const nodes: Record<string, Node> = {
     "Or just missed sitting next to me." ],
     options: [
       { label: "“Both.”", next: 'bc_more' },
+      { label: "“Let’s go in the ocean again.”", next: 'bc_replay' },
       { label: "“Kiss me.”", next: 'bc_kiss' },
       { label: "“Let’s go somewhere else.”", next: 'where2' } ] },
+  // beach ocean replay — different from first wade
+  bc_replay: { steps: [
+    { sfx: 'heh' },
+    "Back in already?",
+    { sfx: 'chuckle' },
+    "The ocean missed us… or maybe I just missed you in the water.",
+    "Swimsuits on. Let’s go deeper this time." ], then: 'bc_undress' },
 
   arrive_bedroom: { steps: ["Back home.", "It’s better with you in it."], then: 'hub' },
   // ====== CUDDLE UNDER THE BLANKET: matches the animation (they lie down, the blanket slides over them, afternoon light). The "special cuddle" part stays tender: the screen fades and we skip ahead. ======
@@ -900,9 +977,11 @@ export const nodes: Record<string, Node> = {
     { sfx: 'uhh' },
     "I can feel your skin under the surface.",
     { sfx: 'sigh' },
+    "Nothing between us but the water.",
     "Don’t look at me like that unless you mean it." ],
     options: [
       { label: "“I mean it.”", next: 'pl_close' },
+      { label: "“Touch me.”", next: 'pl_hands' },
       { label: "“Kiss me.”", next: 'pl_wkiss' },
       { label: "“Splash me.”", next: 'pl_splash' },
       { label: "“Hold me tighter.”", next: 'pl_close' } ] },
@@ -915,7 +994,13 @@ export const nodes: Record<string, Node> = {
     { act: 'kiss' },
     { sfx: 'mm' },
     { sfx: 'giggle' },
-    "Stay against me." ], then: 'pl_end' },
+    "No clothes. No space.",
+    "Stay against me." ],
+    options: [
+      { label: "“Don’t stop holding me.”", next: 'pl_intimate' },
+      { label: "“Your hands… lower.”", next: 'pl_hands' },
+      { label: "“Kiss me harder.”", next: 'pl_wkiss' },
+      { label: "“I love this.”", next: 'pl_end' } ] },
 
   pl_wkiss: { steps: [
     { act: 'kiss' },
@@ -923,7 +1008,12 @@ export const nodes: Record<string, Node> = {
     "Soft…",
     { act: 'hug' },
     { sfx: 'sigh' },
-    "I could kiss you until the lights dim." ], then: 'pl_end' },
+    "Wet lips… I could kiss you until the lights dim." ],
+    options: [
+      { label: "“Again. Deeper.”", next: 'pl_wkiss2' },
+      { label: "“Touch me while you kiss me.”", next: 'pl_kiss_touch' },
+      { label: "“I want more of you.”", next: 'pl_intimate' },
+      { label: "“Hold me.”", next: 'pl_close' } ] },
 
   pl_splash: { steps: [
     { set: { splash: true } },
@@ -938,18 +1028,99 @@ export const nodes: Record<string, Node> = {
     "Here…",
     "On your waist. Under the water.",
     { sfx: 'heh' },
-    "Tell me if you want them higher." ],
+    "My hands are warm against you.",
+    "Tell me if you want them higher… or lower." ],
     options: [
       { label: "“Higher.”", next: 'pl_more' },
+      { label: "“Lower… slow.”", next: 'pl_lower' },
       { label: "“Just hold me.”", next: 'pl_close' },
-      { label: "“Kiss me.”", next: 'pl_wkiss' } ] },
+      { label: "“Kiss me while you touch me.”", next: 'pl_kiss_touch' } ] },
 
   pl_more: { steps: [
     { sfx: 'breath' },
     "Okay…",
     "Slow. I want to feel you shiver a little.",
     { act: 'hug' },
-    "You’re dangerous when you say yes like that." ], then: 'pl_end' },
+    "Your chest against mine…",
+    "You’re dangerous when you say yes like that." ],
+    options: [
+      { label: "“Don’t stop.”", next: 'pl_intimate' },
+      { label: "“Lower.”", next: 'pl_lower' },
+      { label: "“Kiss me.”", next: 'pl_wkiss' },
+      { label: "“I need a second.”", next: 'pl_end' } ] },
+
+  pl_lower: { steps: [
+    { sfx: 'breath' },
+    "Like this…?",
+    { sfx: 'shy' },
+    "Under the water, where no one can see… only us.",
+    { act: 'hug' },
+    "You’re trembling a little. I like that." ],
+    options: [
+      { label: "“Keep going.”", next: 'pl_intimate' },
+      { label: "“Kiss me.”", next: 'pl_kiss_touch' },
+      { label: "“Hold me tight.”", next: 'pl_close' },
+      { label: "“I’m yours.”", next: 'pl_intimate' } ] },
+
+  pl_kiss_touch: { steps: [
+    { act: 'kiss' },
+    { sfx: 'mm' },
+    { sfx: 'foh' },
+    "Kiss and hands… at the same time.",
+    { sfx: 'breath' },
+    "You make me forget how to breathe." ], then: 'pl_intimate' },
+
+  pl_intimate: { steps: [
+    { sfx: 'breath' },
+    "Come closer…",
+    "Wrap your legs around me.",
+    { act: 'hug' },
+    { sfx: 'hmm' },
+    "Skin on skin. Water all around us.",
+    "I want you so much right now.",
+    { sfx: 'shy' },
+    "Tell me what you want." ],
+    options: [
+      { label: "“I want you. All of you.”", next: 'pl_want' },
+      { label: "“Touch me everywhere.”", next: 'pl_everywhere' },
+      { label: "“Just stay like this… close.”", next: 'pl_close2' },
+      { label: "“Take me somewhere private.”", next: 'pl_private' } ] },
+
+  pl_want: { steps: [
+    { sfx: 'breath' },
+    "Then take me.",
+    { act: 'kiss' },
+    { sfx: 'mm' },
+    "I’m already yours under this water.",
+    { sfx: 'foh' },
+    "Don’t let go of me." ], then: 'pl_end' },
+
+  pl_everywhere: { steps: [
+    { sfx: 'shy' },
+    "Everywhere…?",
+    { sfx: 'breath' },
+    "Okay. Slowly.",
+    { act: 'hug' },
+    "My hands know you already…",
+    "but I still want to learn every soft place again." ], then: 'pl_end' },
+
+  pl_close2: { steps: [
+    { act: 'hug' },
+    { sfx: 'hmm' },
+    "Just this. Heartbeat against heartbeat.",
+    "Naked. Quiet. Yours." ], then: 'pl_end' },
+
+  pl_private: { steps: [
+    { sfx: 'chuckle' },
+    "Bedroom. Blanket. Lock the door.",
+    "Come on… before I change my mind and keep you in this water all night." ],
+    options: [
+      { label: "“Let’s go.”", next: 'pl_tobed' },
+      { label: "“One more minute here.”", next: 'pl_end' } ] },
+
+  pl_tobed: { steps: [
+    { set: { naked: false, outfit: 'casual' } },
+    { go: 'bedroom' } ], then: 'arrive_bedroom' },
 
   pl_end: { steps: [
     "Quiet for a second.",
@@ -959,6 +1130,7 @@ export const nodes: Record<string, Node> = {
     options: [
       { label: "“I love you too.”", next: 'pl_love' },
       { label: "“One more kiss.”", next: 'pl_wkiss2' },
+      { label: "“Let’s go in again… naked.”", next: 'pl_replay' },
       { label: "“Take me somewhere else.”", next: 'where2' },
       { label: "“Special cuddle later?”", next: 'pl_cuddle' } ] },
 
@@ -974,6 +1146,27 @@ export const nodes: Record<string, Node> = {
   pl_cuddle: { steps: [
     "Deal.",
     "Pool first… then the blanket is yours." ], then: 'hub' },
+
+  // replay pool — different lines from the first time
+  pl_replay: { steps: [
+    { sfx: 'heh' },
+    "Again? Already?",
+    { sfx: 'chuckle' },
+    "I’m not complaining…",
+    "Clothes off. Back in. Just us and the water." ], then: 'pl_replay_in' },
+  pl_replay_in: { steps: [
+    { set: { naked: true, outfit: 'swim', caption: 'back in the water… nothing on' } },
+    { pose: 'swim' },
+    { sfx: 'breath' },
+    "Feels even better the second time…",
+    "like the water already knows your body.",
+    { act: 'hug' },
+    "Come here. Closer than before." ],
+    options: [
+      { label: "“Touch me again.”", next: 'pl_hands' },
+      { label: "“Kiss me slower this time.”", next: 'pl_wkiss' },
+      { label: "“I want you more now.”", next: 'pl_intimate' },
+      { label: "“Hold me and don’t talk.”", next: 'pl_close2' } ] },
 
   // ====== SHOWER ======
   shower_plan: { steps: [

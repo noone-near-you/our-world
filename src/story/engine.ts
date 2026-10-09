@@ -1,6 +1,6 @@
 import { get, set, type Opt } from '../state/store';
 import { nodes, exchanges, lampPool, type Act } from './script';
-import { sfx, setSfxMuted } from '../audio/audio';
+import { sfx, setSfxMuted, startMoanLoop, stopMoanLoop } from '../audio/audio';
 import { playSoftMusic, onWorldChange, onSongUserPicked, getSongName } from '../audio/music';
 import { setAmbientWorld, startAmbientIfNeeded, setShowerWater, setIntimateAudio, stopAllAmbient } from '../audio/ambient';
 import { pauseMusic, resumeMusic } from '../audio/music';
@@ -39,18 +39,19 @@ export function syncRealTime() {
 }
 
 
-/** Default clothes + pose when switching world (picker or travel). */
+/** Default clothes + pose when switching world (picker or travel). Fresh random clothSeed every entry. */
 function worldDefaults(id: string) {
-  if (id === 'beach') return { outfit: 'beach' as const, pose: 'stand' as const, steam: false, showerOn: false, naked: false };
-  if (id === 'pool') return { outfit: 'swim' as const, pose: 'stand' as const, steam: false, showerOn: false, naked: false };
-  if (id === 'shower') return { outfit: 'swim' as const, pose: 'stand' as const, steam: false, showerOn: false, naked: false };
+  const clothSeed = Math.floor(Math.random() * 1e9);
+  if (id === 'beach') return { outfit: 'beach' as const, pose: 'stand' as const, steam: false, showerOn: false, naked: false, clothSeed };
+  if (id === 'pool') return { outfit: 'swim' as const, pose: 'stand' as const, steam: false, showerOn: false, naked: false, clothSeed };
+  if (id === 'shower') return { outfit: 'swim' as const, pose: 'stand' as const, steam: false, showerOn: false, naked: false, clothSeed };
   return {
     outfit: 'casual' as const,
     pose: 'sit' as const,
     steam: false,
     showerOn: false,
     naked: false,
-    
+    clothSeed,
   };
 }
 
@@ -92,9 +93,29 @@ export async function play(id: string): Promise<void> {
     else if ('gf' in s) { set({ gfHere: true }); const t0 = Date.now(); while (!get().gfSeated && Date.now() - t0 < 9000) await sleep(100); await sleep(400); }
     else if ('wait' in s) await sleep(s.wait);
     else if ('lamp' in s) { set({ line: '', lamp: s.lamp }); sfx('click'); await sleep(1000); }
-    else if ('pose' in s && !('dress' in s)) { set({ line: '', pose: s.pose }); await sleep(s.pose === 'bed' ? 2800 : ['wade', 'swim', 'rest'].includes(s.pose) || (s.pose === 'sit' && (get().world === 'beach' || get().world === 'pool')) ? 3600 : 2400); }
+    else if ('pose' in s && !('dress' in s)) {
+      const w = get().world;
+      // beach / pool / shower walks are longer (around obstacles, into water)
+      const longWalk = ['wade', 'swim', 'rest'].includes(s.pose)
+        || (s.pose === 'sit' && (w === 'beach' || w === 'pool'))
+        || (s.pose === 'stand' && (w === 'beach' || w === 'shower' || w === 'pool'));
+      set({ line: '', pose: s.pose });
+      await sleep(s.pose === 'bed' ? 2800 : longWalk ? 4200 : 2400);
+    }
     else if ('set' in s) {
-      set(s.set);
+      // outfit/caption change: soft fade + new random palette so colors never feel stuck
+      if (s.set.caption || ('outfit' in s.set && s.set.outfit !== get().outfit)) {
+        set({ line: '', fade: 1 });
+        await sleep(500);
+        const patch = { ...s.set } as Partial<import('../state/store').Game>;
+        if ('outfit' in s.set) patch.clothSeed = Math.floor(Math.random() * 1e9);
+        set(patch);
+        await sleep(s.set.caption ? 2200 : 700);
+        set({ caption: '', fade: 0 });
+        await sleep(400);
+      } else {
+        set(s.set);
+      }
       if ('showerOn' in s.set) setShowerWater(!!s.set.showerOn);
       if (s.set.splash) {
         // burst of water drops near both of them + splash sound aligned to the animation
@@ -122,6 +143,7 @@ export async function play(id: string): Promise<void> {
       }
       set({
         outfit: s.dress,
+        clothSeed: Math.floor(Math.random() * 1e9),
         caption: s.caption ?? (get().world === 'bedroom' ? 'a few minutes later…' : ''),
         pose: s.pose ?? 'stand',
         naked: false,
@@ -154,17 +176,28 @@ export async function play(id: string): Promise<void> {
       const ms = (s as any).ms ?? (text && String(text).includes('sweet time') ? 30000 : 2800);
       const intimate = !!(s as any).intimate || ms >= 15000;
       set({ line: '', fade: 1 }); await sleep(800);
-      if (intimate) { pauseMusic(); stopAllAmbient(); setIntimateAudio(true); setSfxMuted(true); sfx('moan'); }
+      if (intimate) {
+        pauseMusic();
+        stopAllAmbient();
+        setIntimateAudio(true);
+        setSfxMuted(true);
+        startMoanLoop();          // ← start repeating
+      }
       set({ caption: text });
       await sleep(ms);
-      // keep caption visible while screen fades back in
-      if (intimate) { setIntimateAudio(false); setSfxMuted(false); setAmbientWorld(get().world); resumeMusic(); }
+      if (intimate) {
+        stopMoanLoop();           // ← stop when black screen ends
+        setIntimateAudio(false);
+        setSfxMuted(false);
+        setAmbientWorld(get().world);
+        resumeMusic();
+      }
       set({ fade: 0 });
-      await sleep(900); // caption still on during fade-in
+      await sleep(900);
       set({ caption: '' });
       await sleep(400);
     }
-  }
+      }
   if (my !== token) return;
   if (n.then) return play(n.then);
   set({ options: n.options ?? [] });
@@ -237,10 +270,14 @@ async function side(id: string) {
   set({ options: n.options ?? [] });
 }
 
-/** When she picks a song: he names it and asks if she likes it. */
+/** When she picks a song: he names it and asks if she likes it.
+ *  Only interrupt at a natural pause (options on screen). Mid-dialogue song changes
+ *  just switch the track — never freeze the conversation. */
 export async function commentOnSong() {
   const g = get();
   if (g.busy || sideOn || g.paused || g.intro !== 'done' || !g.started) return;
+  // mid-line / mid-steps: changing music must not steal the story
+  if (!g.options.length) return;
   const name = getSongName(g.world, g.musicSlot) || 'this one';
   keep = { options: g.options, line: g.line, kind: g.kind };
   sideOn = true;

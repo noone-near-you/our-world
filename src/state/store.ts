@@ -18,6 +18,8 @@ export interface Game {
   showerOn: boolean;             // shower water running
   naked: boolean;               // clothes off in shower (steam covers body)
   splash: boolean;              // trigger beach splash particles once
+  /** random outfit palette seed — changes each world entry / outfit swap so colors never repeat the same way */
+  clothSeed: number;
   musicMuted: boolean;
   musicWanted: boolean;          // she asked for soft music at least once
   musicSlot: number;             // 0..4 current slot
@@ -28,7 +30,7 @@ export interface Game {
   paused: boolean;
   openSongPanel: boolean;  // opening sequence phase
 }
-let s: Game = { started: false, soundOn: false, title: '', line: '', kind: 'say', lineKey: 0, options: [], busy: false, tod: 'afternoon', gfHere: false, gfSeated: false, world: 'bedroom', fade: 0, lamp: true, pose: 'sit', sleepy: 0, scene: false, caption: '', outfit: 'casual', tone: 'soft', beachDone: false, steam: false, flowerInHair: false, showerOn: false, naked: false, splash: false, musicMuted: false, musicWanted: false, musicSlot: 0, musicWorld: 'bedroom', musicSlotByWorld: {}, musicPlaying: false, intro: 'gate', paused: false, openSongPanel: false };
+let s: Game = { started: false, soundOn: false, title: '', line: '', kind: 'say', lineKey: 0, options: [], busy: false, tod: 'afternoon', gfHere: false, gfSeated: false, world: 'bedroom', fade: 0, lamp: true, pose: 'sit', sleepy: 0, scene: false, caption: '', outfit: 'casual', tone: 'soft', beachDone: false, steam: false, flowerInHair: false, showerOn: false, naked: false, splash: false, clothSeed: Math.floor(Math.random() * 1e9), musicMuted: false, musicWanted: false, musicSlot: 0, musicWorld: 'bedroom', musicSlotByWorld: {}, musicPlaying: false, intro: 'gate', paused: false, openSongPanel: false };
 const subs = new Set<() => void>();
 export const get = () => s;
 export const set = (p: Partial<Game>) => { s = { ...s, ...p }; subs.forEach(f => f()); };

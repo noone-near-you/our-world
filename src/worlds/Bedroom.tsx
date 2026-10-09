@@ -610,16 +610,22 @@ function Scene({ ctl }: { ctl: Ctl }) {
     st.current.lx = D(st.current.lx, (z < 1 ? -0.1 : 0.6) + (onP ? -0.6 : 0), 3, dt); const bb = tk.b;
     cam.fov = D(cam.fov, (asp >= 1.6 ? 36 : Math.min(60, 36 * 1.6 / asp)) * z * zoomOut * (1 - 0.42 * bb) * (1 - 0.3 * rg.current.sw), 3, dt); const sw = onB && (pz === 'wade' || pz === 'swim'); R2.bw = D(R2.bw, onB ? 1 : 0, 2.5, dt); R2.sw = D(R2.sw, sw ? 1 : 0, 2.2, dt);
     const camZ = onP ? 6.8 : 6.2;
-    cam.position.set(L(L(st.current.x, -0.5, bb), 3.4, R2.sw), L(L(onP ? 2.6 : 2.6, 5.0, bb) - 0.3 * R2.bw, 2.5, R2.sw), L(camZ, 3.8, R2.sw));
-    cam.lookAt(L(L(st.current.lx, -0.95, bb), 2.4, R2.sw), L(L(1.2, 1.15, bb) + 0.5 * R2.bw, 1.0, R2.sw), L(L(onP ? -2.9 : -0.6, -1.5, bb), -3.8, R2.sw)); cam.updateProjectionMatrix(); cam.updateMatrixWorld();
+    // beach water: frame the RIGHT-side ocean spots (x≈1.5, z≈-4) so both are fully visible
+    const beachLookX = onB ? L(0.2, 1.45, R2.sw) : L(L(st.current.lx, -0.95, bb), 2.4, R2.sw);
+    const beachLookZ = onB ? L(L(-0.6, -1.5, bb), -3.6, R2.sw) : L(L(onP ? -2.9 : -0.6, -1.5, bb), -3.8, R2.sw);
+    const beachCamX = onB ? L(L(st.current.x, -0.5, bb), 2.6, R2.sw) : L(L(st.current.x, -0.5, bb), 3.4, R2.sw);
+    cam.position.set(beachCamX, L(L(onP ? 2.6 : 2.6, 5.0, bb) - 0.3 * R2.bw, 2.5, R2.sw), L(camZ, 3.8, R2.sw));
+    cam.lookAt(beachLookX, L(L(1.2, 1.15, bb) + 0.5 * R2.bw, 1.05, R2.sw), beachLookZ);
+    cam.updateProjectionMatrix(); cam.updateMatrixWorld();
     // always follow real head positions (sit on shower bench, stand, wade…) except pure bed-lie uses fixed anchors
     const walkAbout = pz === 'stand' || pz === 'wade' || pz === 'swim' || pz === 'sit' || worldNow !== 'bedroom';
     R2.hw = D(R2.hw, poseNow === 'bed' ? 0 : 1, 6, dt);
     const headScreen = (k: 0 | 1) => proj(cam, size, HEADW[k].x, HEADW[k].y + 0.55, HEADW[k].z);
     const baseHim = proj(cam, size, L(-0.5, -2.1, bb), L(1.95, 2.05, bb), L(-0.7, -1.8, bb));
     const baseHer = proj(cam, size, L(0.25, -2.1, bb), L(1.95, 1.8, bb), L(-0.7, -1.3, bb));
-    // HEADW is 0,0,0 before first character frame — never use that (puts bubble on legs)
-    const headOk = (k: 0 | 1) => HEADW[k].y > 0.8 && Math.abs(HEADW[k].x) < 20;
+    // HEADW is 0,0,0 before first character frame — never use that (puts bubble on legs).
+    // In water they sink (head y can be ~0.5–1.2) so threshold is lower than dry land.
+    const headOk = (k: 0 | 1) => HEADW[k].y > 0.25 && Math.abs(HEADW[k].x) < 20 && !(HEADW[k].x === 0 && HEADW[k].y === 0 && HEADW[k].z === 0);
     const h0 = headOk(0) ? headScreen(0) : baseHim;
     const h1 = headOk(1) ? headScreen(1) : baseHer;
     const useH = headOk(0) ? R2.hw : 0;

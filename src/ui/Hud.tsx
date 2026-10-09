@@ -20,7 +20,7 @@ function useStream(text: string, key: number): [number, () => void] {
       if (skipped.current) return;
       i++;
       setN(i);
-      if (text[i - 1] !== ' ' && i % 2 === 0) blip(230 + (i % 5) * 18, 0.03, 0.012);
+      if (text[i - 1] !== ' ' && i % 2 === 0) blip(230 + (i % 5) * 18, 0.03, 0.030);
       if (i >= text.length && timer.current) clearInterval(timer.current);
     }, 30);
     return () => { if (timer.current) clearInterval(timer.current); };
@@ -221,7 +221,7 @@ function Intro() {
       if (storySkip.current) return;
       i++;
       setStoryN(i);
-      if (STORY[i - 1] !== ' ' && i % 2 === 0) blip(200 + (i % 6) * 22, 0.025, 0.018);
+      if (STORY[i - 1] !== ' ' && i % 2 === 0) blip(200 + (i % 6) * 22, 0.025, 0.045);
       if (i >= STORY.length && storyTimer.current) clearInterval(storyTimer.current);
     }, 28);
     return () => { if (storyTimer.current) clearInterval(storyTimer.current); };
@@ -339,11 +339,11 @@ function ShowerToggle() {
   const world = useGame(g => g.world);
   const on = useGame(g => g.showerOn);
   const [hint, setHint] = useState(false);
-  // show a short arrow hint the first time they enter the shower
+  // show arrow hint longer so the player notices the shower button
   useEffect(() => {
     if (world !== 'shower') { setHint(false); return; }
     setHint(true);
-    const t = setTimeout(() => setHint(false), 2000);
+    const t = setTimeout(() => setHint(false), 8000);
     return () => clearTimeout(t);
   }, [world]);
   if (world !== 'shower') return null;

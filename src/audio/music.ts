@@ -21,13 +21,13 @@ export const WORLD_SONGS: Record<string, Song[]> = {
     { name: 'Best Part', file: '/music/bedroom/Best Part.mp3' },
     { name: "Can't Help Falling in Love", file: "/music/bedroom/Can't Help Falling in Love.mp3" },
     { name: 'Kiss Me', file: '/music/bedroom/Kiss Me.mp3' },
-    { name: 'Until I Found You', file: '/music/bedroom/Until I Found You.mp3' },
+    { name: 'Until I found You', file: '/music/bedroom/Until I Found You.mp3' },
   ],
   kitchen: [
     { name: 'Banana Pancakes', file: '/music/kitchen/Banana Pancakes.mp3' },
     { name: 'Better Together', file: '/music/kitchen/Better Together.mp3' },
     { name: 'L-O-V-E', file: '/music/kitchen/L-O-V-E.mp3' },
-    { name: 'Put Your Records On', file: '/music/kitchen/Put Your Records On.mp3' },
+    { name: 'Put your Records On', file: '/music/kitchen/Put Your Records On.mp3' },
     { name: 'Sunday Morning', file: '/music/kitchen/Sunday Morning.mp3' },
   ],
   beach: [
@@ -45,7 +45,7 @@ export const WORLD_SONGS: Record<string, Song[]> = {
   ],
   garden: [
     { name: 'Bloom', file: '/music/garden/Bloom.mp3' },
-    { name: 'Dream a Little Dream', file: '/music/garden/Dream a Little Dream.mp3' },
+    { name: 'Dream a Little Dream of Me', file: '/music/garden/Dream a Little Dream.mp3' },
     { name: 'La Vie En Rose', file: '/music/garden/La Vie En Rose.mp3' },
     { name: 'Lover', file: '/music/garden/Lover.mp3' },
     { name: 'Sweet Creature', file: '/music/garden/Sweet Creature.mp3' },
@@ -64,15 +64,49 @@ let currentSlot = 0;
 let muted = false;
 let started = false;
 
+/** Preloaded Audio elements keyed by resolved URL — cuts CDN start delay */
+const preloadCache = new Map<string, HTMLAudioElement>();
+
 function ensure() {
   if (!audio) {
     audio = new Audio();
     audio.loop = true;
-    audio.volume = 0.22;
+    audio.volume = 0.15;
     audio.preload = 'auto';
     audio.crossOrigin = 'anonymous'; // needed when loading from CDN
   }
   return audio;
+}
+
+/** Warm the cache for every song in a world so the next pick starts instantly */
+export function preloadWorldSongs(world: string) {
+  const list = getSongsFor(world);
+  for (const song of list) {
+    if (!song?.file) continue;
+    const src = mediaUrl(song.file);
+    if (preloadCache.has(src)) continue;
+    try {
+      const el = new Audio();
+      el.preload = 'auto';
+      el.crossOrigin = 'anonymous';
+      el.src = src;
+      // kick off network fetch without playing
+      el.load();
+      preloadCache.set(src, el);
+    } catch { /* */ }
+  }
+}
+
+/** Wait until enough data is buffered (or timeout) before play */
+function waitReady(el: HTMLAudioElement, ms = 2500): Promise<void> {
+  if (el.readyState >= 3) return Promise.resolve(); // HAVE_FUTURE_DATA+
+  return new Promise(resolve => {
+    let done = false;
+    const finish = () => { if (done) return; done = true; clearTimeout(t); el.removeEventListener('canplaythrough', finish); el.removeEventListener('canplay', finish); resolve(); };
+    const t = window.setTimeout(finish, ms);
+    el.addEventListener('canplaythrough', finish);
+    el.addEventListener('canplay', finish);
+  });
 }
 
 export function isMusicMuted() { return muted; }
@@ -111,23 +145,37 @@ export function playSlot(world: string, slot: number, force = true) {
   const src = mediaUrl(song.file);
   const same = a.src === src || a.src.endsWith(encodeURI(song.file)) || a.src.includes(encodeURIComponent(song.file.split('/').pop() || ''));
   if (same && !a.paused && !force) return;
+  // warm the rest of this world's tracks in the background
+  preloadWorldSongs(world);
   try {
     a.onplaying = () => setMusicPlaying(true);
     a.onpause = () => setMusicPlaying(false);
     a.onended = () => setMusicPlaying(false);
     a.onerror = () => setMusicPlaying(false);
     a.pause();
-    a.src = src;
+    // reuse preloaded element data if available (same URL already buffering)
+    const cached = preloadCache.get(src);
+    if (cached && cached.readyState >= 2 && a.src !== src) {
+      a.src = src;
+    } else {
+      a.src = src;
+    }
     a.currentTime = 0;
-    a.volume = 0.22;
-    const p = a.play();
-    if (p && typeof p.catch === 'function') p.catch(() => { setMusicPlaying(false); });
+    a.volume = 0.15;
+    // wait briefly for CDN buffer so play doesn't start silent / delayed
+    waitReady(a, 1800).then(() => {
+      if (currentSlot !== idx || currentWorld !== world) return; // user already switched
+      const p = a.play();
+      if (p && typeof p.catch === 'function') p.catch(() => { setMusicPlaying(false); });
+    });
   } catch { setMusicPlaying(false); }
 }
 
 export function onWorldChange(world: string) {
   // ambient always follows the world
   setAmbientWorld(world);
+  // preload this world's songs so the first pick isn't laggy on CDN
+  preloadWorldSongs(world);
   // keep the current song playing across world changes —
   // only change when the player picks a song or conversation starts one
   if (started && audio && !audio.paused && !muted) return;
@@ -163,8 +211,8 @@ export function chooseSong(slot: number) {
   const by = { ...(get().musicSlotByWorld ?? {}), [w]: slot };
   set({ musicSlotByWorld: by, musicWanted: true });
   playSlot(w, slot, true);
-  // short delay so the track starts before they talk about it
-  setTimeout(() => notifySongPicked(), 500);
+  // slightly longer delay so CDN-buffered track has started before the song comment
+  setTimeout(() => notifySongPicked(), 900);
 }
 
 /** Stop the song and let ambient fill the room again. */

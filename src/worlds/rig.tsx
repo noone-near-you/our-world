@@ -148,14 +148,38 @@ function paintFace(x: CanvasRenderingContext2D, f: FP, her: boolean, eyeC: strin
   } else { x.beginPath(); x.moveTo(cx - 24, my - f.sm * 5); x.quadraticCurveTo(cx, my + 4 + f.sm * 16, cx + 24, my - f.sm * 5); x.stroke(); }
 }
 
-const floralTex = () => {   // transparent canvas with little flowers, laid over his shirt
+/** Deterministic PRNG from seed */
+const seeded = (seed: number) => {
+  let s = (seed >>> 0) || 1;
+  return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 0xffffffff; };
+};
+const pick = <T,>(rng: () => number, arr: T[]) => arr[Math.floor(rng() * arr.length) % arr.length];
+
+/** Random clothing palettes — different every world entry / outfit change */
+const CASUAL_TOPS_HIM = ['#4a6b40', '#3a5a7a', '#6b4a3a', '#2a4a5a', '#5a3a6a', '#4a5a3a', '#3a4a6a', '#7a4a3a'];
+const CASUAL_PANTS_HIM = ['#2e2e32', '#3a3a40', '#2a2a38', '#1e2830', '#2e2830', '#243028'];
+const CASUAL_TOPS_HER = ['#d98a96', '#c87a8a', '#e0a0a8', '#b87a90', '#d0a0b0', '#c89078', '#a87890', '#e8a0b8'];
+const CASUAL_PANTS_HER = ['#2e2e32', '#3a2e38', '#2a2830', '#38303a', '#2e2838'];
+const BEACH_SHIRTS = ['#2b8c8c', '#3a7ab0', '#c85a4a', '#5a9a3a', '#8a5ac0', '#d0a030', '#2a6a9a', '#c07040', '#4a9a8a', '#9a3a6a'];
+const BEACH_SHORTS = ['#e6d6a0', '#d0c090', '#c8b878', '#e8d8b0', '#b8a870', '#f0e0b8'];
+const BEACH_DRESSES = ['#f5ecdc', '#f0e0d0', '#e8d8c8', '#f8f0e0', '#e0d0c0', '#fff5e8', '#f0d8d0', '#e8e0f0'];
+const SWIM_BIKINI = ['#ee6f93', '#e85a80', '#ff7a9a', '#d04070', '#c85090', '#f060a0', '#ff5080', '#b03060', '#ff90b0', '#e04060', '#ff6a50', '#c060d0'];
+const SWIM_TRUNKS = ['#1f2430', '#2a3040', '#1a2030', '#243038', '#0e1820', '#2a2030', '#1a2830', '#302838', '#183040'];
+const HAT_BANDS_HIM = ['#3a6ea5', '#2a5a90', '#4a7ab0', '#1a4a80', '#5a6a3a', '#6a3a4a'];
+const HAT_BANDS_HER = ['#ff7f7f', '#ff6a90', '#e07080', '#ff90a0', '#f0a070', '#d080b0'];
+
+function floralTex(seed: number) {
+  const rng = seeded(seed + 77);
+  const petals = ['#ff7fa0', '#ffd25a', '#ff9a5a', '#ff6f8f', '#a0d0ff', '#ffb0d0', '#90e0a0', '#ffc070'];
   const cv = document.createElement('canvas'); cv.width = cv.height = 128; const x = cv.getContext('2d')!;
-  for (const [fx, fy, c] of [[24, 26, '#ff7fa0'], [86, 20, '#ffd25a'], [58, 62, '#ff9a5a'], [20, 98, '#ffd25a'], [100, 90, '#ff7fa0']] as [number, number, string][]) {
+  for (let i = 0; i < 5; i++) {
+    const fx = 16 + rng() * 96, fy = 16 + rng() * 96, c = pick(rng, petals);
     x.fillStyle = '#2f9a4a'; x.beginPath(); x.ellipse(fx + 14, fy + 10, 9, 4, 0.6, 0, 7); x.fill();
     x.fillStyle = c; for (let k = 0; k < 5; k++) { const a = k * 1.2566; x.beginPath(); x.arc(fx + Math.cos(a) * 8, fy + Math.sin(a) * 8, 7, 0, 7); x.fill(); }
-    x.fillStyle = '#fff3b0'; x.beginPath(); x.arc(fx, fy, 4, 0, 7); x.fill(); }
+    x.fillStyle = '#fff3b0'; x.beginPath(); x.arc(fx, fy, 4, 0, 7); x.fill();
+  }
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(3, 1.6); return t;
-};
+}
 const Hat = ({ band }: { band: string }) => (   // round straw sun hat: dome + wide flat brim + ribbon
   <group position={[0, 0.37, 0]} rotation={[-0.06, 0, 0]}>
     <mesh scale={[0.29, 0.26, 0.28]} castShadow><sphereGeometry args={[1, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />{toon('#e8cf8f')}<Outlines thickness={0.007 / 0.28} color={INK} /></mesh>
@@ -187,12 +211,34 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
   const gLive = get();
   const outfit = gLive.outfit, world = gLive.world, naked = gLive.naked;
   const beach = outfit === 'beach', swim = outfit === 'swim';
-  // beach: flower shirt + shorts / dress + hats. swim: trunks / bikini
-  const top = (swim || naked) ? skin : beach ? (long ? '#f5ecdc' : '#2b8c8c') : topIn;
-  const pants = naked ? skin : swim ? (long ? '#ee6f93' : '#1f2430') : beach ? (long ? '#f5ecdc' : '#e6d6a0') : pantsIn;
-  const floral = useMemo(() => (beach && !long && !naked ? floralTex() : null), [beach, long, naked]);
+  const seed = gLive.clothSeed ?? 1;
+  // random palette per character + seed so colors change every world / outfit swap
+  const palette = useMemo(() => {
+    const rng = seeded(seed + i * 9973);
+    if (swim || naked) {
+      return {
+        top: skin,
+        pants: naked ? skin : (long ? pick(rng, SWIM_BIKINI) : pick(rng, SWIM_TRUNKS)),
+        hat: long ? pick(rng, HAT_BANDS_HER) : pick(rng, HAT_BANDS_HIM),
+      };
+    }
+    if (beach) {
+      return {
+        top: long ? pick(rng, BEACH_DRESSES) : pick(rng, BEACH_SHIRTS),
+        pants: long ? pick(rng, BEACH_DRESSES) : pick(rng, BEACH_SHORTS),
+        hat: long ? pick(rng, HAT_BANDS_HER) : pick(rng, HAT_BANDS_HIM),
+      };
+    }
+    return {
+      top: long ? pick(rng, CASUAL_TOPS_HER) : pick(rng, CASUAL_TOPS_HIM),
+      pants: long ? pick(rng, CASUAL_PANTS_HER) : pick(rng, CASUAL_PANTS_HIM),
+      hat: long ? pick(rng, HAT_BANDS_HER) : pick(rng, HAT_BANDS_HIM),
+    };
+  }, [seed, i, swim, naked, beach, long, skin]);
+  const top = palette.top, pants = palette.pants;
+  const floral = useMemo(() => (beach && !long && !naked ? floralTex(seed) : null), [beach, long, naked, seed]);
   const d = i === 0 ? 1 : -1, b0 = useMemo(() => base(d), [d]), cur = useRef<P>({ ...b0 }), blinkAt = useRef(2 + i), corr = useRef(new THREE.Vector3()), lag = useRef({ y: 0, p: 0, r: 0 });
-  const W = useRef({ stage: i === 1 ? 0 : 2, turn: 0, ph: 0, s: i === 1 ? 1 : 0, yaw: 0, lie: 0, sink: 0, sp: 1, tr: 0 });   // stage: 0 walking in, 1 turning round, 2 seated
+  const W = useRef({ stage: i === 1 ? 0 : 2, turn: 0, ph: 0, s: i === 1 ? 1 : 0, yaw: 0, lie: 0, sink: 0, sp: 1, tr: 0, lastWorld: '' });   // stage: 0 walking in, 1 turning round, 2 seated
   const O = useRef<Record<string, THREE.Object3D>>({}), o = (k: string) => (n: THREE.Object3D | null) => { if (n) O.current[k] = n; };
   const hip = [useRef<THREE.Group>(null!), useRef<THREE.Group>(null!)], knee = [useRef<THREE.Group>(null!), useRef<THREE.Group>(null!)];
   const trim = useMemo(() => tl(top, 0.78), [top]), shine = useMemo(() => lt(hc, 0.5), [hc]), eyeC = long ? '#7a4a6a' : '#4a6a8a', lipC = long ? '#e8808a' : '#d98a84';
@@ -227,6 +273,21 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
     }
     if (g.sleepy > 0) tgt = { ...tgt, eye: Math.max(0.02, tgt.eye * (1 - 1.2 * g.sleepy)), sm: g.sleepy > 0.7 ? Math.min(tgt.sm, 0.5) : tgt.sm, mo: 0 };   // drowsy / asleep eyes
     const p = cur.current; for (const k in b0) p[k] = D(p[k], tgt[k], k === 'nS' || k === 'hy' || k === 'nik' ? 14 : 9, dt);
+    // on world change: start off-screen and walk in so they never "pop" through furniture
+    if (w.lastWorld !== g.world) {
+      w.lastWorld = g.world;
+      if (g.world === 'beach') {
+        // approach from the sides of the loungers, not through them
+        const sideX = i === 0 ? -3.2 : 3.2;
+        rp.set(sideX, 0, 0.6); w.sink = 0; w.s = 1; w.stage = 2; // stage 2 so walkB handles pathing
+      } else if (g.world === 'shower') {
+        // approach from outside the open front of the stall
+        rp.set(i === 0 ? -0.5 : 0.5, 0, 2.4); w.sink = 0; w.s = 1; w.stage = 2;
+      } else if (g.world === 'pool') {
+        const sideX = i === 0 ? -5.2 : 5.2;
+        rp.set(sideX, 0, 0.8); w.sink = 0; w.s = 1; w.stage = 2;
+      }
+    }
     if (i === 1) {   // her entrance: off-screen -> walks in -> turns to face him -> sits down
       if (!get().gfHere) { w.stage = 0; rp.set(x + 7, 0, -0.2); w.s = 1; }
       else if (w.stage === 0) { rp.x -= 1.9 * dt; if (rp.x <= x) { rp.x = x; w.stage = 1; w.turn = 0; } }
@@ -238,6 +299,8 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
     // beach: wade/swim go around loungers — him left, her right (never through the bench)
     const onShower = g.world === 'shower';
     // pool: sit = on tiled edge feet in water; wade/swim = in the water facing each other
+    // beach shoreline is diagonal through (0,-3.5). Depth needs z past the local shore line.
+    // wade ≈ knee depth, swim ≈ waist depth.
     const SPOT: Record<string, [number, number][]> = onShower
       ? {
           stand: [[-0.45, 1.15], [0.4, 1.15]],
@@ -254,13 +317,57 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
           wade: [[-0.28, -2.85], [0.28, -2.85]],
           swim: [[-0.22, -2.55], [0.22, -2.55]],
         }
-      : { stand: [[-0.7, 0.45], [0.25, 0.45]], wade: [[1.4, -2.7], [2.0, -2.7]], swim: [[1.5, -4.0], [2.05, -4.0]] };
-    let gs = SPOT[g.pose]?.[i] ?? (onShower ? [x * 0.45, 1.15] : [x, -0.95]);
-    // beach: first step clear of the loungers (z≈-0.95), then head to the water
+      : {
+          // beach layout (camera looks toward -Z into the sea):
+          // loungers at x≈-0.55/0.25, z≈-0.95. Stand in FRONT (toward camera, +Z).
+          // Water is in FRONT of shore toward -Z, on the RIGHT side of the loungers.
+          stand: [[-0.55, 0.55], [0.25, 0.55]],   // in front of loungers, dry sand
+          sit:   [[-0.55, -0.55], [0.25, -0.55]], // on cushions (not through legs)
+          // both at same z so they sink equally; close x so hug/kiss reach works
+          wade:  [[1.15, -3.85], [1.75, -3.85]],  // right side, knee-deep
+          swim:  [[1.20, -4.55], [1.80, -4.55]],  // right side, waist-deep
+        };
+    let gs = SPOT[g.pose]?.[i] ?? (onShower ? [x * 0.45, 1.15] : [x, -0.55]);
+    // during hug/kiss in water: pull them almost together so arms actually wrap
+    if (onBeach && liveAct && (g.pose === 'wade' || g.pose === 'swim') && (c.act === 'hug' || c.act === 'kiss')) {
+      const midX = (SPOT[g.pose][0][0] + SPOT[g.pose][1][0]) * 0.5;
+      const closeX = i === 0 ? midX - 0.22 : midX + 0.22;
+      gs = [closeX, SPOT[g.pose][i][1]];
+    }
+    // beach → water: walk RIGHT around loungers, then into the ocean (never through benches)
     if (onBeach && (g.pose === 'wade' || g.pose === 'swim')) {
-      const sideX = i === 0 ? -1.75 : 1.55; // him left of benches, her right
-      if (rp.z > -1.55) {
-        gs = [sideX, Math.min(rp.z - 0.15, -1.35)]; // walk around the side first
+      const rightX = 2.1;
+      if (rp.z > -1.2) {
+        // still on dry sand / near loungers → first clear to the right
+        gs = [rightX, Math.min(rp.z - 0.15, -0.4)];
+      } else if (rp.x < 1.0) {
+        // not yet on the right path → keep moving right before going deeper
+        gs = [rightX, Math.min(rp.z - 0.1, gs[1])];
+      }
+    }
+    // beach ← water: walk back along the right side, then to loungers (never through)
+    if (onBeach && (g.pose === 'sit' || g.pose === 'stand')) {
+      const rightX = 2.1;
+      if (rp.z < -1.3) {
+        if (rp.x < 1.5) {
+          gs = [rightX, rp.z]; // get to the right path first
+        } else {
+          gs = [rightX, Math.max(gs[1], -0.3)]; // walk toward camera along right
+        }
+      }
+    }
+    // shower: never walk through the glass sides — enter only through the open front
+    // stall group at z≈-0.55, open front faces +Z (camera). Stand is at z=1.15 outside.
+    if (onShower && (g.pose === 'wade' || g.pose === 'swim')) {
+      // if still outside the stall (z > 0.2), first walk to the open front center
+      if (rp.z > 0.15) {
+        gs = [gs[0] * 0.3, 0.2]; // approach open front on centerline
+      }
+    }
+    if (onShower && (g.pose === 'stand' || g.pose === 'sit')) {
+      // leaving the stall: step out the open front first, then to stand spot
+      if (rp.z < 0.1) {
+        gs = [gs[0] * 0.3, 0.25];
       }
     }
     // pool: walk AROUND the water on the side deck, then along the back rim to sit
@@ -291,34 +398,41 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
     const walkA = i === 1 && get().gfHere && w.stage === 0;
     let walkB = false, faceYaw = 0;
     if ((i === 0 || w.stage === 2) && !bedP) { const dx = gs[0] - rp.x, dz = gs[1] - rp.z, dist = Math.hypot(dx, dz);
-      // short slide only when already close on dry ground — never slide across the pool
-      const canSlide = dist < 1.2 && w.stage === 2 && !onBeach && !(onPool && (Math.abs(rp.x) < 4.0 && rp.z > -3.95 && rp.z < 0.9));
+      // short slide on dry ground; also allow slide during beach hug/kiss so they close the gap
+      const actClose = onBeach && liveAct && (c.act === 'hug' || c.act === 'kiss');
+      const canSlide = dist < 1.2 && w.stage === 2 && (actClose || (!onBeach && !(onPool && (Math.abs(rp.x) < 4.0 && rp.z > -3.95 && rp.z < 0.9))));
       if (dist > 0.03) {
         if (canSlide) {
-          rp.x = D(rp.x, gs[0], 3.5, dt); rp.z = D(rp.z, gs[1], 3.5, dt);
+          rp.x = D(rp.x, gs[0], actClose ? 6 : 3.5, dt); rp.z = D(rp.z, gs[1], actClose ? 6 : 3.5, dt);
         } else {
-          const spd = walkA ? 1.15 : (onPool ? 1.55 : 1.8);
+          const spd = walkA ? 1.15 : (onPool ? 1.55 : (onBeach ? 2.0 : 1.8));
           const st = Math.min(dist, spd * dt);
           rp.x += dx / dist * st; rp.z += dz / dist * st;
           walkB = true; faceYaw = Math.atan2(dx, dz);
         }
       }
     }
-    const zs = -6.5 + 0.5 * (rp.x + 6), depth = onBeach ? clamp((zs - rp.z) / 1.8, 0, 1) : 0;
-    // sit: butts on dry rim. wade → upper chest. swim → shoulders
+    // beach sink is POSE-based so both characters always share the same waterline
+    // (geometric depth made him/her sink unevenly and hide heads)
+    // wade ≈ knees (~0.42), swim ≈ waist (~0.78). Dry poses = 0.
+    const beachSink =
+      onBeach && g.pose === 'wade' ? 0.42 :
+      onBeach && g.pose === 'swim' ? 0.78 : 0;
+    // pool: sit on rim almost dry; wade/swim deeper
     const poolSink = onPool && (g.pose === 'wade' || g.pose === 'swim') ? (g.pose === 'swim' ? 1.55 : 1.25) : onPool && g.pose === 'sit' ? 0.03 : 0;
-    const sinkT = onPool ? poolSink : 1.3 * depth * depth * (3 - 2 * depth);
-    // slow damp so waterline climbs gradually as they step in
-    w.sink = D(w.sink, sinkT, onPool ? 1.6 : 8, dt); BODY[i].x = rp.x; BODY[i].z = rp.z; BODY[i].sink = w.sink;
+    const sinkT = onPool ? poolSink : beachSink;
+    // slow damp so waterline climbs / drops gradually as they walk in or out
+    w.sink = D(w.sink, sinkT, onPool ? 1.6 : 2.4, dt); BODY[i].x = rp.x; BODY[i].z = rp.z; BODY[i].sink = w.sink;
     const walking = walkA || walkB, standing = (i === 1 && w.stage < 2) || walkB || standP || wadeP || swimP;
     // pool sit keeps them "seated" (ss→0) so legs can dangle; other sitting uses same
     w.s = D(w.s, standing ? 1 : 0, w.stage === 2 ? 3.5 : 20, dt);
     // pool sit on back edge: face +Z (toward camera / pool interior) so legs hang over the water — that's
     // the rig's normal default-facing direction (yaw 0), same as every other camera-facing seated pose,
     // so no override is needed here (unlike the old right-edge seat, which had to face sideways).
-    // pool in-water: face roughly toward camera / each other
-    const poolInFace = onPool && (g.pose === 'wade' || g.pose === 'swim') ? (i === 0 ? 0.35 : -0.35) : 0;
-    const tyaw = walkA ? -Math.PI / 2 : walkB ? faceYaw : poolInFace;
+    // in-water (pool or beach): face each other so hug/kiss connect
+    const inWaterFace = (onPool || onBeach) && (g.pose === 'wade' || g.pose === 'swim')
+      ? (i === 0 ? 0.55 : -0.55) : 0;
+    const tyaw = walkA ? -Math.PI / 2 : walkB ? faceYaw : inWaterFace;
     const dy = Math.atan2(Math.sin(tyaw - w.yaw), Math.cos(tyaw - w.yaw)); w.yaw += dy * (1 - Math.exp(-7 * dt));
     const prevPh = w.ph;
     // her entrance walk: clearer step cadence
@@ -342,8 +456,11 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
         hip[k].current.rotation.x = -0.85 + (k === 0 ? -0.04 : 0.03);
         knee[k].current.rotation.x = 0.35 + (k === 0 ? 0.05 : -0.03);
       } else {
-        hip[k].current.rotation.x = L(-Math.PI / 2, 0, ss) - le * 0.25 - (walking ? Math.sin(w.ph + ph) * 0.28 : 0) - pop * 0.32;
-        knee[k].current.rotation.x = L(onLounger && !standing ? 0.12 : Math.PI / 2, 0, ss) + le * 0.4 + (walking ? Math.max(0, -Math.sin(w.ph + ph + 0.9)) * 0.42 : 0) + pop * 0.5;
+        // beach sit: tuck knees more so calves don't pass through the lounger cushion
+        const sitKnee = onBeach && !standing ? 0.55 : (onLounger && !standing ? 0.12 : Math.PI / 2);
+        const sitHip = onBeach && !standing ? -1.35 : -Math.PI / 2;
+        hip[k].current.rotation.x = L(sitHip, 0, ss) - le * 0.25 - (walking ? Math.sin(w.ph + ph) * 0.28 : 0) - pop * 0.32;
+        knee[k].current.rotation.x = L(sitKnee, 0, ss) + le * 0.4 + (walking ? Math.max(0, -Math.sin(w.ph + ph + 0.9)) * 0.42 : 0) + pop * 0.5;
       }
     }
     if (long && standP) N.pelvis.position.x = D(N.pelvis.position.x, walking ? 0 : 0.04, 4, dt); else N.pelvis.position.x = D(N.pelvis.position.x, 0, 6, dt);
@@ -474,7 +591,7 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
           <group ref={o('head')} position={[0, 0.62, 0]}>
             <mesh geometry={headG} position={[0, 0.28, 0]} scale={HS} castShadow>{toon(skin, 0.14)}<Outlines thickness={0.007 / 0.26} color={INK} /></mesh>
             <mesh geometry={patchG} position={[0, 0.28, 0]} scale={[HS[0] * 1.004, HS[1] * 1.004, HS[2] * 1.004]} material={faceMat} />
-            {beach && <Hat band={long ? '#ff7f7f' : '#3a6ea5'} />}
+            {beach && <Hat band={palette.hat} />}
             <TE p={[-0.262, 0.25, 0]} s={[0.03, 0.05, 0.035]} c={skin} /><TE p={[0.262, 0.25, 0]} s={[0.03, 0.05, 0.035]} c={skin} />
             <TE p={[0, 0.164, 0.218]} s={[0.016, 0.02, 0.02]} c={skin} /><mesh ref={o('lipBump')} position={[0, 0.08, 0.165]} scale={0.0001}><sphereGeometry args={[1, 14, 10]} />{toon(lipC, 0.2)}</mesh>
             <group ref={o('hairPt')} position={[d * 0.3, 0.36, 0.06]} /><group ref={o('lipPt')} position={[0, 0.08, 0.17]} /><group ref={o('nose')} position={[0, 0.164, 0.232]} /><group ref={o('jaw')} position={[0, 0.2, -0.2]} />

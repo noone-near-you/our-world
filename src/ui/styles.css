@@ -45,19 +45,20 @@ button:active:not(:disabled){background:rgba(224,168,107,.28)}button:disabled{op
 .world-toggle{display:flex;align-items:center;gap:.45rem;padding:.4rem .7rem;min-height:0;border-radius:999px;background:rgba(22,17,14,.4);border:1px solid rgba(224,168,107,.35);font-size:.78rem;letter-spacing:.04em;backdrop-filter:blur(10px)}
 .world-dot{width:10px;height:10px;border-radius:50%;box-shadow:0 0 8px currentColor;flex-shrink:0}
 .world-name{opacity:.95}.world-chev{opacity:.55;font-size:.7rem}
-/* change min-width here to make the world dropdown wider/narrower */
+/* world dropdown: same width as the button, all options equal width */
 .world-panel{
-  min-width:120px;
-  max-width:140px;
-  padding:.3rem;
-  gap:.2rem;
-  border-radius:12px;
+  position:absolute;top:calc(100% + 6px);right:0;z-index:30;
+  min-width:100%;width:max-content;
+  display:flex;flex-direction:column;gap:.15rem;padding:.25rem;border-radius:14px;
+  background:rgba(22,17,14,.4);border:1px solid rgba(224,168,107,.3);backdrop-filter:blur(10px);
+  transform-origin:top right;animation:dropIn .18s ease-out;
 }
 .world-chip{
-  font-size:.65rem;
-  padding:.3rem .45rem;
-  gap:.35rem;
+  display:flex;align-items:center;gap:.4rem;width:100%;min-height:0;
+  padding:.3rem .5rem;font-size:.7rem;border-radius:10px;text-align:left;
+  background:transparent;border-color:transparent;
 }
+@keyframes dropIn{from{opacity:0;transform:translateY(-6px) scaleY(.85)}}
 .chip-emoji{font-size:.75rem}
 .world-chip.active{border-color:rgba(224,168,107,.5);background:rgba(224,168,107,.14)}
 .world-chip:disabled{opacity:.55}.chip-emoji{font-size:1rem;line-height:1}
@@ -73,26 +74,19 @@ button:active:not(:disabled){background:rgba(224,168,107,.28)}button:disabled{op
   66%{box-shadow:0 0 14px 2px rgba(120,255,180,.3);background:rgba(100,220,160,.18);color:#b8ffd0}
   100%{box-shadow:0 0 0 0 rgba(224,168,107,.0);background:rgba(224,100,160,.18);color:#ffb4d0}
 }
-.song-panel{
-  position:absolute;
-  top:0;
-  right:calc(100% + 6px); /* opens to the side of the icon (toward center) */
-  left:auto;
-  min-width:110px;
-  max-width:150px;
-  padding:.3rem;
-  gap:.18rem;
-  border-radius:12px;
+/* music: circular fan around the song button */
+.radial-wrap{position:relative}
+.radial{position:absolute;left:50%;top:50%;width:0;height:0;z-index:30}
+.radial-item{
+  position:absolute;left:-15px;top:-15px;width:30px;height:30px;min-height:0;padding:0;
+  border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7rem;
+  background:rgba(22,17,14,.4);border:1px solid rgba(224,168,107,.35);backdrop-filter:blur(10px);
+  opacity:0;transform:scale(.3);
+  animation:radialOut .28s cubic-bezier(.2,.9,.3,1.2) both;animation-delay:calc(var(--i) * 35ms);
 }
-.song-title{font-size:.55rem}
-.song-chip{font-size:.6rem;padding:.28rem .4rem}
-.song-num{width:1rem;height:1rem;font-size:.55rem}
-.song-chip.active{border-color:rgba(224,168,107,.5);background:rgba(224,168,107,.14)}
-.song-chip.stop-chip{opacity:.9;border-color:rgba(255,120,120,.25)}
-.song-chip.soft{justify-content:center;opacity:.85;margin-top:.15rem}
-.song-num{width:1.2rem;height:1.2rem;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.65rem;background:rgba(255,255,255,.1);flex-shrink:0}
-.song-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.song-eq{margin-left:auto;color:#e0a86b;animation:eq 1s ease-in-out infinite}
+@keyframes radialOut{to{opacity:1;transform:translate(var(--x),var(--y)) scale(1)}}
+.radial-item.active{border-color:rgba(224,168,107,.7);background:rgba(224,168,107,.22);color:#ffd9a8}
+.radial-item.stop-chip{border-color:rgba(255,120,120,.4)}
 @keyframes eq{0%,100%{opacity:.4}50%{opacity:1}}
 
 /* shower on/off hint arrow (shows ~2s on first enter) */
@@ -155,8 +149,11 @@ button:active:not(:disabled){background:rgba(224,168,107,.28)}button:disabled{op
 
 .exit-count{margin:.6rem 0;font-size:3rem;font-weight:600;letter-spacing:.08em;color:#e0a86b}
 
-/* auto fullscreen countdown (PC) */
-.fs-count{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,9,8,.82);pointer-events:none;text-align:center}
-.fs-count-label{margin:0;font-size:.8rem;letter-spacing:.25em;text-transform:uppercase;opacity:.6}
-.fs-count-num{margin:.2rem 0 0;font-size:clamp(4rem,16vw,8rem);font-weight:300;color:#e0a86b;line-height:1;animation:fsPop 1s ease both}
-@keyframes fsPop{0%{opacity:0;transform:scale(1.5)}30%{opacity:1;transform:scale(1)}100%{opacity:.85;transform:scale(.92)}}
+/* start tap (phone) — sits above the "turn sideways" overlay */
+.start-screen{z-index:60;gap:.7rem}
+.start-btn{min-height:32px;padding:.3rem .9rem;font-size:.7rem;letter-spacing:.12em;border-radius:999px}
+.start-sub{margin:0;font-size:.62rem;letter-spacing:.12em;opacity:.45}
+/* loading lines after the story */
+.load-screen{cursor:default;z-index:60}
+.load-line{margin:0;font-size:.78rem;letter-spacing:.22em;font-style:italic;opacity:0;color:#e0c9a8;animation:loadLine 1.7s ease-in-out both}
+@keyframes loadLine{0%{opacity:0;transform:translateY(4px)}25%,70%{opacity:.85;transform:none}100%{opacity:0}}

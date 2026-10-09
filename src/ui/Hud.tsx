@@ -20,7 +20,7 @@ function useStream(text: string, key: number): [number, () => void] {
       if (skipped.current) return;
       i++;
       setN(i);
-      if (text[i - 1] !== ' ' && i % 2 === 0) blip(230 + (i % 5) * 18, 0.03, 0.030);
+      if (text[i - 1] !== ' ' && i % 2 === 0) blip(230 + (i % 5) * 18, 0.03, 0.040);
       if (i >= text.length && timer.current) clearInterval(timer.current);
     }, 30);
     return () => { if (timer.current) clearInterval(timer.current); };
@@ -248,7 +248,7 @@ function Intro() {
       if (storySkip.current) return;
       i++;
       setStoryN(i);
-      if (STORY[i - 1] !== ' ' && i % 2 === 0) blip(200 + (i % 6) * 22, 0.025, 0.045);
+      if (STORY[i - 1] !== ' ' && i % 2 === 0) blip(200 + (i % 6) * 22, 0.025, 0.060);
       if (i >= STORY.length && storyTimer.current) clearInterval(storyTimer.current);
     }, 28);
     return () => { if (storyTimer.current) clearInterval(storyTimer.current); };
@@ -430,6 +430,7 @@ function MusicBar() {
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M11 5 6 9H2v6h4l5 4V5zM15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14" /></svg>
         )}
       </button>
+      <div className="radial-wrap">
       <button
         className={`music-btn song-pick-btn${playing && !muted ? ' playing' : ''}`}
         aria-label="Choose song"
@@ -437,31 +438,36 @@ function MusicBar() {
         onClick={() => { blip(400); setOpen(o => !o); }}>
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
       </button>
+
       {open && (() => {
         const songs = getSongsFor(world || 'bedroom').filter(s => s.file);
+        const items = [
+          { key: 'stop', label: '■', title: 'Stop music', cls: 'stop-chip', run: () => { blip(320); stopMusic(); } },
+          ...songs.map((s, i) => ({
+            key: 's' + i, label: String(i + 1), title: s.name,
+            cls: slot === i && playing ? 'active' : '',
+            run: () => { blip(480); chooseSong(i); },
+          })),
+          { key: 'soft', label: '♪', title: 'Play soft music', cls: 'soft', run: () => { blip(440); playSoftMusic(); } },
+        ];
+        const n = items.length, R = 112, start = 90, end = 180; // degrees: 90 = straight down, 180 = straight left
         return (
-          <div className="song-panel">
-            <p className="song-title">{(world || 'bedroom')} · songs</p>
-            {/* first option: stop music → ambient comes back */}
-            <button className="song-chip stop-chip"
-              onClick={() => { blip(320); stopMusic(); setOpen(false); }}>
-              <span className="song-num">■</span>
-              <span className="song-name">Stop music</span>
-            </button>
-            {songs.map((s, i) => (
-              <button key={i} className={`song-chip${slot === i && playing ? ' active' : ''}`}
-                onClick={() => { blip(480); chooseSong(i); setOpen(false); }}>
-                <span className="song-num">{i + 1}</span>
-                <span className="song-name">{s.name}</span>
-                {slot === i && playing && !muted && <span className="song-eq">♪</span>}
-              </button>
-            ))}
-            <button className="song-chip soft" onClick={() => { blip(440); playSoftMusic(); setOpen(false); }}>
-              Play soft music
-            </button>
+          <div className="radial">
+            {items.map((it, i) => {
+              const a = (n === 1 ? start : start + (i * (end - start)) / (n - 1)) * Math.PI / 180;
+              return (
+                <button key={it.key} className={`radial-item ${it.cls}`} title={it.title} aria-label={it.title}
+                  style={{ '--x': `${Math.cos(a) * R}px`, '--y': `${Math.sin(a) * R}px`, '--i': i } as any}
+                  onClick={() => { it.run(); setOpen(false); }}>
+                  {it.label}
+                </button>
+              );
+            })}
           </div>
         );
       })()}
+    </div>
+        
     </div>
   );
 }

@@ -21,13 +21,13 @@ export const WORLD_SONGS: Record<string, Song[]> = {
     { name: 'Best Part', file: '/music/bedroom/Best Part.mp3' },
     { name: "Can't Help Falling in Love", file: "/music/bedroom/Can't Help Falling in Love.mp3" },
     { name: 'Kiss Me', file: '/music/bedroom/Kiss Me.mp3' },
-    { name: 'Until I found You', file: '/music/bedroom/Until I Found You.mp3' },
+    { name: 'Until I found You', file: '/music/bedroom/Until I found You.mp3' },
   ],
   kitchen: [
     { name: 'Banana Pancakes', file: '/music/kitchen/Banana Pancakes.mp3' },
     { name: 'Better Together', file: '/music/kitchen/Better Together.mp3' },
     { name: 'L-O-V-E', file: '/music/kitchen/L-O-V-E.mp3' },
-    { name: 'Put your Records On', file: '/music/kitchen/Put Your Records On.mp3' },
+    { name: 'Put your Records On', file: '/music/kitchen/Put your Records On.mp3' },
     { name: 'Sunday Morning', file: '/music/kitchen/Sunday Morning.mp3' },
   ],
   beach: [
@@ -45,7 +45,7 @@ export const WORLD_SONGS: Record<string, Song[]> = {
   ],
   garden: [
     { name: 'Bloom', file: '/music/garden/Bloom.mp3' },
-    { name: 'Dream a Little Dream of Me', file: '/music/garden/Dream a Little Dream.mp3' },
+    { name: 'Dream a Little Dream of Me', file: '/music/garden/Dream a Little Dream of Me.mp3' },
     { name: 'La Vie En Rose', file: '/music/garden/La Vie En Rose.mp3' },
     { name: 'Lover', file: '/music/garden/Lover.mp3' },
     { name: 'Sweet Creature', file: '/music/garden/Sweet Creature.mp3' },
@@ -71,7 +71,7 @@ function ensure() {
   if (!audio) {
     audio = new Audio();
     audio.loop = true;
-    audio.volume = 0.15;
+    audio.volume = 0.10;
     audio.preload = 'auto';
     audio.crossOrigin = 'anonymous'; // needed when loading from CDN
   }
@@ -161,7 +161,7 @@ export function playSlot(world: string, slot: number, force = true) {
       a.src = src;
     }
     a.currentTime = 0;
-    a.volume = 0.15;
+    a.volume = 0.10;
     // wait briefly for CDN buffer so play doesn't start silent / delayed
     waitReady(a, 1800).then(() => {
       if (currentSlot !== idx || currentWorld !== world) return; // user already switched

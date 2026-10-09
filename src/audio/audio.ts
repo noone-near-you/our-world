@@ -153,40 +153,31 @@ export const SFX_FILES: Record<string, { file: string; vol: number }> = {
 
 /** Adjust moan loudness here (0..1). Used in shower intimate moment. */
 export const MOAN_VOLUME = 0.90;
+/** Moan during intimate blackout: full clip, then restart from 0 when it ends. */
 let moanEl: HTMLAudioElement | null = null;
 let moanActive = false;
-
-function playMoanOnce() {
-  if (!moanActive || !get().soundOn) return;
-  try {
-    if (moanEl) {
-      try { moanEl.pause(); moanEl.onended = null; moanEl.src = ''; } catch { /* */ }
-    }
-    const meta = SFX_FILES.moan;
-    const el = new Audio(`/sfx/${meta?.file ?? 'moan.mp3'}`);
-    el.volume = Math.min(1, meta?.vol ?? MOAN_VOLUME);
-    el.onended = () => {
-      if (moanActive) playMoanOnce(); // repeat
-    };
-    el.onerror = () => {
-      if (moanActive) setTimeout(() => playMoanOnce(), 400);
-    };
-    moanEl = el;
-    unlockAudio();
-    const p = el.play();
-    if (p && typeof p.catch === 'function') {
-      p.catch(() => {
-        if (moanActive) setTimeout(() => playMoanOnce(), 400);
-      });
-    }
-  } catch { /* */ }
-}
 
 export function startMoanLoop() {
   stopMoanLoop();
   if (!get().soundOn) return;
   moanActive = true;
-  playMoanOnce();
+  try {
+    const meta = SFX_FILES.moan;
+    const el = new Audio(`/sfx/${meta?.file ?? 'moan.mp3'}`);
+    el.loop = false;
+    el.preload = 'auto';
+    el.volume = Math.min(1, meta?.vol ?? MOAN_VOLUME);
+    el.onended = () => {
+      if (!moanActive || !moanEl) return;
+      try {
+        moanEl.currentTime = 0;
+        moanEl.play().catch(() => {});
+      } catch { /* */ }
+    };
+    moanEl = el;
+    unlockAudio();
+    el.play().catch(() => {});
+  } catch { /* */ }
 }
 
 export function stopMoanLoop() {
@@ -194,7 +185,6 @@ export function stopMoanLoop() {
   if (moanEl) {
     try {
       moanEl.onended = null;
-      moanEl.onerror = null;
       moanEl.pause();
       moanEl.currentTime = 0;
       moanEl.src = '';

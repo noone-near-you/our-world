@@ -92,24 +92,26 @@ button:active:not(:disabled){background:rgba(224,168,107,.28)}button:disabled{op
 @keyframes welcomeIn{0%{opacity:0;transform:translateY(12px)}100%{opacity:1;transform:none}}
 .intro-hint{position:absolute;bottom:max(1.5rem,env(safe-area-inset-bottom));left:0;right:0;margin:0;font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;opacity:.45;animation:hintPulse 2s ease-in-out infinite}
 /* tilt + earphone pre-screens (phone and PC) */
-.pre-screen{gap:0.75rem;background:#0a0908}
-.pre-icon{font-size:clamp(2.8rem,10vw,4.2rem);line-height:1;margin-bottom:0.4rem;animation:welcomeIn 0.9s ease both}
-.tilt-icon{animation:tiltWiggle 2.2s ease-in-out infinite}
-@keyframes tiltWiggle{
-  0%,100%{transform:rotate(-12deg)}
-  50%{transform:rotate(12deg)}
-}
+/* earphone pre-screen — compact on phone */
+.pre-screen{gap:0.45rem;background:#0a0908;padding:1.25rem}
+.pre-icon{font-size:clamp(1.35rem,5vw,1.85rem);line-height:1;margin-bottom:0.2rem;animation:welcomeIn 0.9s ease both}
 .warn-icon{
   animation:warnPulse 1.4s ease-in-out infinite;
   transform-origin:center bottom;
 }
 @keyframes warnPulse{
   0%,100%{transform:scale(1) translateY(0);filter:drop-shadow(0 0 0 transparent)}
-  40%{transform:scale(1.12) translateY(-4px);filter:drop-shadow(0 0 12px rgba(255,180,60,.55))}
-  60%{transform:scale(1.06) translateY(-2px);filter:drop-shadow(0 0 8px rgba(255,180,60,.35))}
+  40%{transform:scale(1.1) translateY(-2px);filter:drop-shadow(0 0 8px rgba(255,180,60,.45))}
+  60%{transform:scale(1.05) translateY(-1px);filter:drop-shadow(0 0 5px rgba(255,180,60,.3))}
 }
-.pre-title{margin:0;font-weight:500;font-size:clamp(1.25rem,4.5vw,1.85rem);letter-spacing:.03em}
-.pre-sub{margin:0.35rem 0 0;font-size:clamp(0.9rem,2.8vw,1.1rem);line-height:1.5;opacity:0.7;max-width:min(420px,90vw)}
+.pre-title{margin:0;font-weight:500;font-size:clamp(0.85rem,2.8vw,1.05rem);letter-spacing:.02em}
+.pre-sub{margin:0.25rem 0 0;font-size:clamp(0.65rem,2.2vw,0.8rem);line-height:1.45;opacity:0.65;max-width:min(320px,88vw)}
+.pre-btn{
+  margin-top:0.9rem;min-height:36px;padding:0.4rem 1.1rem;border-radius:10px;
+  border:1px solid rgba(224,168,107,.55);background:rgba(224,168,107,.18);color:#f2e6d8;
+  font-size:0.75rem;letter-spacing:.05em;cursor:pointer;
+}
+.pre-btn:active{transform:scale(0.98)}
 @keyframes hintPulse{0%,100%{opacity:.3}50%{opacity:.6}}
 .story-screen{background:radial-gradient(ellipse at 50% 40%,#1a1410 0%,#0a0908 70%)}
 .story-block{max-width:min(640px,88vw);position:relative}

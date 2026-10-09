@@ -203,6 +203,33 @@ function useZzz(on: boolean) {
     z.style.fontSize = `${16 + Math.random() * 10}px`; z.style.setProperty('--d', '2.6s'); z.style.setProperty('--dx', `${10 + Math.random() * 30}px`); document.body.appendChild(z); z.addEventListener('animationend', () => z.remove()); }, 900); return () => clearInterval(t); }, [on]);
 }
 
+function EarphoneThenBrightness() {
+  useEffect(() => {
+    const t = setTimeout(() => set({ intro: 'brightness' }), 8000);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div className="intro-screen pre-screen" key="earphone">
+      <div className="pre-icon warn-icon" aria-hidden>⚠️</div>
+      <p className="pre-title">Please plug in earphones</p>
+      <p className="pre-sub">This experience uses soft audio and intimate sounds.<br />Headphones are recommended — on phone and PC.</p>
+    </div>
+  );
+}
+
+function BrightnessAuto() {
+  useEffect(() => {
+    const t = setTimeout(() => set({ intro: 'gate' }), 8000);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div className="intro-screen pre-screen" key="brightness">
+      <div className="pre-icon" aria-hidden>🔆</div>
+      <p className="pre-title">Increase brightness & volume</p>
+      <p className="pre-sub">Turn up screen brightness and headphone volume<br />for the best experience.</p>
+    </div>
+  );
+}
 /** Opening: welcome → story typing → enter world */
 function Intro() {
   const intro = useGame(g => g.intro);
@@ -233,17 +260,18 @@ function Intro() {
     setStoryN(STORY.length);
   };
 
+  
+
   // 2) Earphones warning (phone + PC)
   if (intro === 'earphone') {
-    return (
-      <div className="intro-screen pre-screen" onClick={() => set({ intro: 'gate' })}>
-        <div className="pre-icon warn-icon" aria-hidden>⚠️</div>
-        <p className="pre-title">Please plug in earphones</p>
-        <p className="pre-sub">This experience uses soft audio and intimate sounds.<br />Headphones are recommended</p>
-        <p className="intro-hint">tap to continue</p>
-      </div>
-    );
+    return <EarphoneThenBrightness />;
   }
+
+  if (intro === 'brightness') {
+    return <BrightnessAuto />;
+  }
+
+  
   if (intro === 'gate') {
     return (
       <div className="gate intro-gate">

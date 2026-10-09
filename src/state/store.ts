@@ -26,7 +26,7 @@ export interface Game {
   musicWorld: string;
   musicSlotByWorld: Record<string, number>;
   musicPlaying: boolean;         // a song is actively playing (for UI pulse)
-  intro:  'earphone' | 'gate' | 'welcome' | 'story' | 'done';
+  intro:  'earphone' | 'brightness' | 'gate' | 'welcome' | 'story' | 'done';
   paused: boolean;
   openSongPanel: boolean;  // opening sequence phase
 }

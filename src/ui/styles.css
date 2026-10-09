@@ -1,0 +1,113 @@
+:root{--ink:#f3e9dc;--glass:rgba(22,17,14,.42);--accent:#e0a86b}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body,#root{margin:0;height:100%;background:#0e0c0b;color:var(--ink);font-family:Georgia,'Times New Roman',serif;overflow:hidden;overscroll-behavior:none;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.bedroom{position:fixed;inset:0;background:#1a1410}canvas{display:block;touch-action:none}
+button{font:inherit;color:var(--ink);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:.8rem 1.3rem;min-height:46px;backdrop-filter:blur(10px)}
+button:active:not(:disabled){background:rgba(224,168,107,.28)}button:disabled{opacity:.35}.ghost{background:none;border-color:transparent;opacity:.6}
+.gate{position:fixed;inset:0;z-index:30;background:#0e0c0b;display:flex;flex-direction:column;gap:.9rem;align-items:center;justify-content:center;padding:2rem;text-align:center}
+.eyebrow{letter-spacing:.22em;text-transform:uppercase;font-size:.75rem;opacity:.6;margin:0 0 1rem}
+.title{position:fixed;inset:0;z-index:25;display:flex;align-items:center;justify-content:center;text-align:center;padding:2rem;background:rgba(14,12,11,.55);pointer-events:none;animation:titleIn 2.5s ease both}
+.title h1{font-weight:400;font-size:clamp(2rem,10vw,3.4rem);margin:0}
+@keyframes titleIn{0%{opacity:0}25%,75%{opacity:1}100%{opacity:0}}
+/* speech bubbles: HIS (warm, above his head) and HERS (rose, at the bottom, tail pointing up at her) */
+.bub{position:fixed;z-index:12;font-size:.88rem;line-height:1.35;border-radius:18px;backdrop-filter:blur(10px);box-shadow:0 8px 24px rgba(0,0,0,.35);animation:pop .25s cubic-bezier(.3,1.4,.5,1)}
+.bub::after{content:'';position:absolute;width:12px;height:12px;background:inherit;border:inherit;transform:translateX(-50%) rotate(45deg)}
+.bub.him{left:0;top:0;transform:translate(-50%,-100%);visibility:hidden;width:max-content;max-width:min(42vw,320px);min-width:56px;padding:.55rem .8rem;overflow-wrap:anywhere;word-break:break-word;background:rgba(24,18,14,.55);border:1px solid rgba(224,168,107,.4);z-index:12}
+.bub.him::after{bottom:-7px;left:calc(50% + var(--tx,0px));border-top:0;border-left:0}
+.bub.him.thought{background:rgba(40,34,30,.5);border:1px dashed rgba(255,255,255,.35);font-style:italic;opacity:.92}
+.bub p{margin:0}.stream{position:relative}.ghost{visibility:hidden}.live{position:absolute;left:0;top:0;right:0}
+.bub small{display:block;text-align:right;opacity:.5}
+.bub.her{right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));top:auto;transform:none;width:min(38vw,320px);max-height:55dvh;overflow:auto;padding:.4rem;background:rgba(62,34,44,.52);border:1px solid rgba(229,138,160,.4);z-index:20}
+.bub.her::after{display:none}
+.bub.her button{background:rgba(255,255,255,.07);display:block;width:100%;text-align:left;margin:0 0 .35rem;border-radius:13px;font-size:.8rem;line-height:1.25;padding:.45rem .65rem;min-height:38px;overflow-wrap:anywhere}.bub.her button:last-child{margin:0}
+@keyframes pop{from{opacity:0;scale:.9}}
+.rail{position:fixed;left:max(10px,env(safe-area-inset-left));top:50%;transform:translateY(-50%);z-index:11;display:flex;flex-direction:column;gap:.5rem}
+.rail button{display:flex;align-items:center;justify-content:center;width:56px;height:56px;min-height:0;padding:0;border-radius:50%;background:rgba(22,17,14,.38);border-color:rgba(224,168,107,.35);backdrop-filter:blur(10px)}
+.heart{position:fixed;z-index:15;pointer-events:none;color:#e58aa0;text-shadow:0 0 8px rgba(229,138,160,.6);animation:heartUp var(--d) ease-out forwards}
+@keyframes heartUp{0%{opacity:0;transform:translate(0,0) scale(.4)}20%{opacity:1}100%{opacity:0;transform:translate(var(--dx),-90px) scale(1.1)}}
+.fade{position:fixed;inset:0;background:#000;pointer-events:none;transition:opacity .6s;z-index:40;opacity:0}
+.rotate{display:none;position:fixed;inset:0;z-index:50;background:#0e0c0b;align-items:center;justify-content:center;text-align:center;padding:2rem}
+@media (orientation:portrait){.rotate{display:flex}}
+
+/* table-lamp button (bedroom) + time-skip caption */
+.lampbtn{display:flex;align-items:center;justify-content:center;width:56px;height:56px;min-height:0;padding:0;border-radius:50%;background:rgba(22,17,14,.38);border-color:rgba(224,168,107,.35);opacity:.75;backdrop-filter:blur(10px)}
+.lampbtn.on{color:#ffd48a;opacity:1;box-shadow:0 0 18px rgba(255,196,120,.4)}.lampbtn:disabled{opacity:.3}
+.caption{position:fixed;inset:0;z-index:45;display:flex;align-items:center;justify-content:center;text-align:center;padding:2rem;pointer-events:none;animation:capIn .6s ease both}
+.caption p{margin:0;font-style:italic;letter-spacing:.14em;font-size:clamp(1.1rem,4vw,1.8rem)}
+@keyframes capIn{0%{opacity:0}100%{opacity:1}}
+
+.rail{gap:.35rem}.rail button{width:50px;height:50px}
+.zzz{color:#cfe0ff;text-shadow:0 0 8px rgba(160,190,255,.7);font-style:italic}
+
+/* ---- top bar: music + world switcher ---- */
+.topbar{position:fixed;top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));z-index:20;display:flex;align-items:flex-start;gap:.45rem;pointer-events:auto}
+.worldbar,.musicbar{position:relative;display:flex;flex-direction:column;align-items:flex-end;gap:.35rem}
+.world-toggle{display:flex;align-items:center;gap:.45rem;padding:.4rem .7rem;min-height:0;border-radius:999px;background:rgba(22,17,14,.4);border:1px solid rgba(224,168,107,.35);font-size:.78rem;letter-spacing:.04em;backdrop-filter:blur(10px)}
+.world-dot{width:10px;height:10px;border-radius:50%;box-shadow:0 0 8px currentColor;flex-shrink:0}
+.world-name{opacity:.95}.world-chev{opacity:.55;font-size:.7rem}
+/* change min-width here to make the world dropdown wider/narrower */
+.world-panel{display:flex;flex-direction:column;gap:.3rem;padding:.4rem;border-radius:16px;background:rgba(18,14,12,.55);border:1px solid rgba(224,168,107,.28);backdrop-filter:blur(14px);min-width:190px;animation:pop .2s ease}
+.world-chip{display:flex;align-items:center;gap:.5rem;width:100%;text-align:left;padding:.45rem .65rem;min-height:0;border-radius:12px;font-size:.8rem;background:rgba(255,255,255,.05);border:1px solid transparent}
+.world-chip.active{border-color:rgba(224,168,107,.5);background:rgba(224,168,107,.14)}
+.world-chip:disabled{opacity:.55}.chip-emoji{font-size:1rem;line-height:1}
+.music-btn{display:flex;align-items:center;justify-content:center;width:42px;height:42px;min-height:0;padding:0;border-radius:50%;background:rgba(22,17,14,.4);border-color:rgba(224,168,107,.3);backdrop-filter:blur(10px)}
+/* colorful pulse while a song is playing */
+.music-btn.playing,.song-pick-btn.playing{
+  animation:musicGlow 2.2s ease-in-out infinite;
+  border-color:rgba(255,180,120,.55);
+}
+@keyframes musicGlow{
+  0%{box-shadow:0 0 0 0 rgba(224,168,107,.0);background:rgba(224,100,160,.18);color:#ffb4d0}
+  33%{box-shadow:0 0 14px 2px rgba(120,180,255,.35);background:rgba(100,160,255,.2);color:#a8d0ff}
+  66%{box-shadow:0 0 14px 2px rgba(120,255,180,.3);background:rgba(100,220,160,.18);color:#b8ffd0}
+  100%{box-shadow:0 0 0 0 rgba(224,168,107,.0);background:rgba(224,100,160,.18);color:#ffb4d0}
+}
+.song-panel{position:absolute;top:calc(100% + 6px);right:0;display:flex;flex-direction:column;gap:.28rem;padding:.4rem;border-radius:16px;background:rgba(18,14,12,.55);border:1px solid rgba(224,168,107,.28);backdrop-filter:blur(14px);min-width:170px;animation:pop .2s ease;z-index:22}
+.song-title{margin:0 .2rem .15rem;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;opacity:.55}
+.song-chip{display:flex;align-items:center;gap:.5rem;width:100%;text-align:left;padding:.4rem .55rem;min-height:0;border-radius:11px;font-size:.78rem;background:rgba(255,255,255,.05);border:1px solid transparent}
+.song-chip.active{border-color:rgba(224,168,107,.5);background:rgba(224,168,107,.14)}
+.song-chip.stop-chip{opacity:.9;border-color:rgba(255,120,120,.25)}
+.song-chip.soft{justify-content:center;opacity:.85;margin-top:.15rem}
+.song-num{width:1.2rem;height:1.2rem;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.65rem;background:rgba(255,255,255,.1);flex-shrink:0}
+.song-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.song-eq{margin-left:auto;color:#e0a86b;animation:eq 1s ease-in-out infinite}
+@keyframes eq{0%,100%{opacity:.4}50%{opacity:1}}
+
+/* shower on/off hint arrow (shows ~2s on first enter) */
+.shower-wrap{position:relative;display:flex;align-items:center}
+.shower-hint{position:absolute;right:calc(100% + 8px);top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:.35rem;white-space:nowrap;pointer-events:none;animation:hintFade 2s ease forwards;z-index:25}
+.shower-hint-arrow{font-size:1.1rem;color:#7ec8f0;animation:hintBounce 0.6s ease-in-out infinite alternate}
+.shower-hint-text{font-size:.7rem;letter-spacing:.06em;color:#cfe8f8;background:rgba(20,30,40,.55);padding:.25rem .5rem;border-radius:8px;border:1px solid rgba(126,200,240,.35);backdrop-filter:blur(8px)}
+@keyframes hintBounce{from{transform:translateX(-3px)}to{transform:translateX(2px)}}
+@keyframes hintFade{0%{opacity:0}15%{opacity:1}75%{opacity:1}100%{opacity:0}}
+.shower-btn.pulse-hint{animation:hintPulseBtn 0.7s ease-in-out 3}
+@keyframes hintPulseBtn{0%,100%{box-shadow:0 0 0 0 rgba(126,200,240,.0)}50%{box-shadow:0 0 12px 3px rgba(126,200,240,.45)}}
+
+/* ---- intro sequence ---- */
+.intro-gate .eyebrow{margin-bottom:.4rem}
+.intro-screen{position:fixed;inset:0;z-index:35;background:#0a0908;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center;cursor:pointer}
+.welcome-anim{animation:welcomeIn 1.4s ease both}
+.welcome-line{margin:0;font-weight:400;font-size:clamp(1.6rem,6vw,2.8rem);letter-spacing:.04em;line-height:1.35}
+.welcome-line.accent{color:#e0a86b;margin-top:.35rem;font-style:italic}
+@keyframes welcomeIn{0%{opacity:0;transform:translateY(12px)}100%{opacity:1;transform:none}}
+.intro-hint{position:absolute;bottom:max(1.5rem,env(safe-area-inset-bottom));left:0;right:0;margin:0;font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;opacity:.45;animation:hintPulse 2s ease-in-out infinite}
+@keyframes hintPulse{0%,100%{opacity:.3}50%{opacity:.6}}
+.story-screen{background:radial-gradient(ellipse at 50% 40%,#1a1410 0%,#0a0908 70%)}
+.story-block{max-width:min(640px,88vw);position:relative}
+.story-text{position:relative;margin:0;font-size:clamp(1rem,3.2vw,1.35rem);line-height:1.65;text-align:left;min-height:6em}
+.story-text .ghost{visibility:hidden}.story-text .live{position:absolute;left:0;top:0;right:0}
+.story-quote{margin:1.4rem 0 0;text-align:right;font-style:italic;letter-spacing:.08em;color:#e0a86b;opacity:.9;font-size:clamp(1rem,2.8vw,1.25rem)}
+
+.shower-btn.active{color:#7ec8f0;background:rgba(126,200,240,.16)}
+
+/* exit confirm */
+.exit-overlay{position:fixed;inset:0;z-index:100;background:rgba(8,6,5,.72);display:flex;align-items:center;justify-content:center;padding:1.5rem;backdrop-filter:blur(6px)}
+.exit-card{background:rgba(28,22,18,.95);border:1px solid rgba(224,168,107,.45);border-radius:18px;padding:1.4rem 1.5rem;max-width:320px;width:100%;text-align:center;box-shadow:0 16px 40px rgba(0,0,0,.45)}
+.exit-title{margin:0 0 .4rem;font-size:1.15rem;letter-spacing:.02em}
+.exit-sub{margin:0 0 1.1rem;font-size:.85rem;opacity:.65}
+.exit-actions{display:flex;gap:.6rem}
+.exit-actions button{flex:1;min-height:44px;border-radius:12px;font-size:.9rem}
+.exit-no{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2)}
+.exit-yes{background:rgba(180,60,60,.55);border:1px solid rgba(255,120,120,.4);color:#ffd0d0}
+
+.exit-count{margin:.6rem 0;font-size:3rem;font-weight:600;letter-spacing:.08em;color:#e0a86b}

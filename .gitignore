@@ -1,0 +1,29 @@
+# dependencies
+node_modules/
+
+# build
+dist/
+build/
+.vite/
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# logs / cache
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# editor
+.idea/
+.vscode/
+*.swp
+
+
+# optional: don't commit huge local music if you prefer LFS or CDN
+public/music
+# public/sfx
+public/ambient

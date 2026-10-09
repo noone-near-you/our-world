@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "lib": ["ES2020", "DOM"]
+  },
+  "include": ["src"],
+  "exclude": [
+    "src/**/*.bak",
+    "src/components",
+    "src/data",
+    "src/dialogue",
+    "src/interactions",
+    "src/llm",
+    "src/memories",
+    "src/cinematics",
+    "src/characters",
+    "src/scenes",
+    "src/utils"
+  ]
+}

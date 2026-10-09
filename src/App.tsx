@@ -1,0 +1,10 @@
+import { Suspense, lazy } from 'react';
+import { Hud } from './ui/Hud';
+const Bedroom = lazy(() => import('./worlds/Bedroom'));
+export default function App() {
+  return (<>
+    <Suspense fallback={<div className="gate"><p className="eyebrow">Loading</p></div>}><Bedroom /></Suspense>
+    <Hud />
+    <div className="rotate"><p>Please turn your phone sideways</p></div>
+  </>);
+}

@@ -154,3 +154,9 @@ button:active:not(:disabled){background:rgba(224,168,107,.28)}button:disabled{op
 .exit-yes{background:rgba(180,60,60,.55);border:1px solid rgba(255,120,120,.4);color:#ffd0d0}
 
 .exit-count{margin:.6rem 0;font-size:3rem;font-weight:600;letter-spacing:.08em;color:#e0a86b}
+
+/* auto fullscreen countdown (PC) */
+.fs-count{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,9,8,.82);pointer-events:none;text-align:center}
+.fs-count-label{margin:0;font-size:.8rem;letter-spacing:.25em;text-transform:uppercase;opacity:.6}
+.fs-count-num{margin:.2rem 0 0;font-size:clamp(4rem,16vw,8rem);font-weight:300;color:#e0a86b;line-height:1;animation:fsPop 1s ease both}
+@keyframes fsPop{0%{opacity:0;transform:scale(1.5)}30%{opacity:1;transform:scale(1)}100%{opacity:.85;transform:scale(.92)}}

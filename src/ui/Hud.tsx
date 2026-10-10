@@ -202,12 +202,24 @@ function useZzz(on: boolean) {
     const z = document.createElement('span'); z.className = 'heart zzz'; z.textContent = Math.random() < 0.5 ? 'z' : 'Z'; z.style.left = `${anch.him.x - 30 + Math.random() * 90}px`; z.style.top = `${anch.him.y + 70}px`;
     z.style.fontSize = `${16 + Math.random() * 10}px`; z.style.setProperty('--d', '2.6s'); z.style.setProperty('--dx', `${10 + Math.random() * 30}px`); document.body.appendChild(z); z.addEventListener('animationend', () => z.remove()); }, 900); return () => clearInterval(t); }, [on]);
 }
-
+/** true while the screen is landscape (the "turn your phone sideways" overlay is hidden) */
+function useLandscape() {
+  const [land, setLand] = useState(() => matchMedia('(orientation: landscape)').matches);
+  useEffect(() => {
+    const m = matchMedia('(orientation: landscape)');
+    const on = () => setLand(m.matches);
+    on();
+    m.addEventListener('change', on);
+    return () => m.removeEventListener('change', on);
+  }, []);
+  return land;
+}
 function EarphoneThenBrightness() {
   useEffect(() => {
+    if(!land) return;
     const t = setTimeout(() => set({ intro: 'brightness' }), 8000);
     return () => clearTimeout(t);
-  }, []);
+  }, [land]);
   return (
     <div className="intro-screen pre-screen" key="earphone">
       <div className="pre-icon warn-icon" aria-hidden>⚠️</div>
@@ -219,9 +231,10 @@ function EarphoneThenBrightness() {
 
 function BrightnessAuto() {
   useEffect(() => {
+    if(!land) return;
     const t = setTimeout(() => set({ intro: 'gate' }), 8000);
     return () => clearTimeout(t);
-  }, []);
+  }, [land]);
   return (
     <div className="intro-screen pre-screen" key="brightness">
       <div className="pre-icon" aria-hidden>🔆</div>

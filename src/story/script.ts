@@ -1290,7 +1290,7 @@ export const nodes: Record<string, Node> = {
       { label: "“Just hold me like this a little longer.”", next: 'sh_slow' } ] },
   sh_intimate: { steps: [
     // black screen 30s: only moan + caption (all other sfx muted)
-    { skip: "It’s their sweet time — let them enjoy.", ms: 30000, intimate: true },
+    { skip: "It’s their sweet time — let them enjoy.", ms: 20000, intimate: true },
   ], then: 'sh_more' },
   sh_more: { steps: [
     { act: 'kiss' }, "Then I’m not stopping.", "Closer.", "Hold on to me." ],

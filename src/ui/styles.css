@@ -151,9 +151,31 @@ button:active:not(:disabled){background:rgba(224,168,107,.28)}button:disabled{op
 
 /* start tap (phone) — sits above the "turn sideways" overlay */
 .start-screen{z-index:60;gap:.7rem}
-.start-btn{min-height:32px;padding:.3rem .9rem;font-size:.7rem;letter-spacing:.12em;border-radius:999px}
+
 .start-sub{margin:0;font-size:.62rem;letter-spacing:.12em;opacity:.45}
 /* loading lines after the story */
 .load-screen{cursor:default;z-index:60}
 .load-line{margin:0;font-size:.78rem;letter-spacing:.22em;font-style:italic;opacity:0;color:#e0c9a8;animation:loadLine 1.7s ease-in-out both}
 @keyframes loadLine{0%{opacity:0;transform:translateY(4px)}25%,70%{opacity:.85;transform:none}100%{opacity:0}}
+
+
+.dt-screen{touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.dt-stage{position:relative;width:110px;height:110px;display:flex;align-items:center;justify-content:center}
+.dt-hand{font-size:3rem;transform-origin:50% 100%;opacity:0;animation:dtHand 2.8s ease-in-out infinite}
+@keyframes dtHand{
+  0%{opacity:0;transform:translateY(40px) scale(1)}
+  15%{opacity:.95;transform:translateY(0) scale(1)}
+  25%{transform:scale(.86)}
+  33%{transform:scale(1)}
+  43%{transform:scale(.86)}
+  51%{transform:scale(1)}
+  80%{opacity:.95;transform:scale(1)}
+  100%{opacity:0;transform:translateY(-12px) scale(1)}
+}
+.dt-ring{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;
+  border:1.5px solid rgba(224,168,107,.7);opacity:0;animation:dtRing 2.8s ease-out infinite}
+.dt-ring.r2{animation-name:dtRing2}
+@keyframes dtRing{0%,24%{opacity:0;transform:scale(.4)}25%{opacity:.8;transform:scale(.4)}40%{opacity:0;transform:scale(1.6)}100%{opacity:0}}
+@keyframes dtRing2{0%,42%{opacity:0;transform:scale(.4)}43%{opacity:.8;transform:scale(.4)}58%{opacity:0;transform:scale(1.6)}100%{opacity:0}}
+.dt-title{margin:0;font-size:.8rem;letter-spacing:.14em;opacity:.8}
+.dt-hand{line-height:1}

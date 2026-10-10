@@ -26,11 +26,21 @@ export interface Game {
   musicWorld: string;
   musicSlotByWorld: Record<string, number>;
   musicPlaying: boolean;         // a song is actively playing (for UI pulse)
-  intro:  'earphone' | 'brightness' | 'gate' | 'welcome' | 'story' | 'done';
+  intro: 'start' | 'earphone' | 'brightness' | 'gate' | 'welcome' | 'story' | 'done';
   paused: boolean;
   openSongPanel: boolean;  // opening sequence phase
 }
-let s: Game = { started: false, soundOn: false, title: '', line: '', kind: 'say', lineKey: 0, options: [], busy: false, tod: 'afternoon', gfHere: false, gfSeated: false, world: 'bedroom', fade: 0, lamp: true, pose: 'sit', sleepy: 0, scene: false, caption: '', outfit: 'casual', tone: 'soft', beachDone: false, steam: false, flowerInHair: false, showerOn: false, naked: false, splash: false, clothSeed: Math.floor(Math.random() * 1e9), musicMuted: false, musicWanted: false, musicSlot: 0, musicWorld: 'bedroom', musicSlotByWorld: {}, musicPlaying: false, intro: 'earphone', paused: false, openSongPanel: false };
+/** true if the page is already fullscreen (API fullscreen, or F11 on PC) */
+/** true if the page is already fullscreen (API fullscreen, installed app, or F11 on a real desktop) */
+export const inFullscreen = () => {
+  if (typeof document === 'undefined') return false;
+  if (document.fullscreenElement || (document as any).webkitFullscreenElement) return true;
+  if (matchMedia('(display-mode: fullscreen)').matches) return true;
+  // F11 detection only for real desktop browsers — never on touch / phone view
+  const touch = matchMedia('(pointer: coarse)').matches;
+  return !touch && innerWidth === screen.width && innerHeight === screen.height;
+};
+let s: Game = { started: false, soundOn: false, title: '', line: '', kind: 'say', lineKey: 0, options: [], busy: false, tod: 'afternoon', gfHere: false, gfSeated: false, world: 'bedroom', fade: 0, lamp: true, pose: 'sit', sleepy: 0, scene: false, caption: '', outfit: 'casual', tone: 'soft', beachDone: false, steam: false, flowerInHair: false, showerOn: false, naked: false, splash: false, clothSeed: Math.floor(Math.random() * 1e9), musicMuted: false, musicWanted: false, musicSlot: 0, musicWorld: 'bedroom', musicSlotByWorld: {}, musicPlaying: false, intro: inFullscreen() ? 'earphone' : 'start', paused: false, openSongPanel: false };
 const subs = new Set<() => void>();
 export const get = () => s;
 export const set = (p: Partial<Game>) => { s = { ...s, ...p }; subs.forEach(f => f()); };

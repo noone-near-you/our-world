@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useGame, set, get } from '../state/store';
+import { get, set, useGame, inFullscreen } from '../state/store';
 import { play, pick, rail, tap, toggleLamp, goWorld, syncRealTime } from '../story/engine';
 import type { Act } from '../story/script';
 import { unlockAudio, blip, sfx } from '../audio/audio';
@@ -214,6 +214,50 @@ function useLandscape() {
   }, []);
   return land;
 }
+const isTouch = () => matchMedia('(pointer: coarse)').matches;
+
+/** fullscreen (phone + PC). Must be called from a tap/click. Landscape lock only on phones. */
+function enterFullscreen() {
+  const el = document.documentElement as any;
+  Promise.resolve()
+    .then(() => (el.requestFullscreen ?? el.webkitRequestFullscreen)?.call(el))
+    .then(() => { if (isTouch()) return (screen.orientation as any)?.lock?.('landscape'); })
+    .catch(() => {});
+}
+
+/** First screen: palm animation → double tap / double click = fullscreen, then earphone screen.
+ *  Skipped automatically if the page is already fullscreen. */
+function StartTap() {
+  const last = useRef(0);
+  const touch = isTouch();
+  const next = () => set({ intro: 'earphone' });
+
+  useEffect(() => {
+    if (inFullscreen()) { next(); return; }              // already fullscreen → skip
+    const onFs = () => { if (document.fullscreenElement) next(); };
+    document.addEventListener('fullscreenchange', onFs);
+    return () => document.removeEventListener('fullscreenchange', onFs);
+  }, []);
+
+  return (
+    <div
+      className="intro-screen start-screen dt-screen"
+      onPointerDown={() => {
+        const now = Date.now();
+        if (now - last.current < 450) { enterFullscreen(); next(); }   // second tap within 450 ms
+        last.current = now;
+      }}>
+      <div className="dt-stage" aria-hidden>
+        <span className="dt-ring r1" />
+        <span className="dt-ring r2" />
+        <span className="dt-hand">{touch ? '🖐️' : '🖱️'}</span>
+      </div>
+      <p className="dt-title">{touch ? 'Double tap' : 'Double click'} to enter fullscreen</p>
+      {touch && <p className="start-sub">My Cutie</p>}
+    </div>
+  );
+}
+
 function EarphoneThenBrightness() {
   const land = useLandscape();
   useEffect(() => {
@@ -225,7 +269,7 @@ function EarphoneThenBrightness() {
     <div className="intro-screen pre-screen" key="earphone">
       <div className="pre-icon warn-icon" aria-hidden>⚠️</div>
       <p className="pre-title">Please plug in earphones</p>
-      <p className="pre-sub">This experience uses soft audio and intimate sounds.<br />Headphones are recommended — on phone and PC.</p>
+      <p className="pre-sub">This experience uses soft audio and intimate sounds.<br />Headphones are recommended</p>
     </div>
   );
 }
@@ -276,7 +320,7 @@ function Intro() {
   };
 
   
-
+  if (intro === 'start') return <StartTap />;
   // 2) Earphones warning (phone + PC)
   if (intro === 'earphone') {
     return <EarphoneThenBrightness />;

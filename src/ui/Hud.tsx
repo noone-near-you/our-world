@@ -20,7 +20,7 @@ function useStream(text: string, key: number): [number, () => void] {
       if (skipped.current) return;
       i++;
       setN(i);
-      if (text[i - 1] !== ' ' && i % 2 === 0) blip(230 + (i % 5) * 18, 0.03, 0.040);
+      if (text[i - 1] !== ' ' && i % 2 === 0) blip(230 + (i % 5) * 18, 0.03, 0.070);
       if (i >= text.length && timer.current) clearInterval(timer.current);
     }, 30);
     return () => { if (timer.current) clearInterval(timer.current); };
@@ -307,7 +307,7 @@ function Intro() {
       if (storySkip.current) return;
       i++;
       setStoryN(i);
-      if (STORY[i - 1] !== ' ' && i % 2 === 0) blip(200 + (i % 6) * 22, 0.025, 0.060);
+      if (STORY[i - 1] !== ' ' && i % 2 === 0) blip(200 + (i % 6) * 22, 0.025, 0.10);
       if (i >= STORY.length && storyTimer.current) clearInterval(storyTimer.current);
     }, 28);
     return () => { if (storyTimer.current) clearInterval(storyTimer.current); };

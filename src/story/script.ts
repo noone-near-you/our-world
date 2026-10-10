@@ -1255,7 +1255,7 @@ export const nodes: Record<string, Node> = {
       { label: "“I want to touch you too.”", next: 'sh_herhand' } ] },
   sh_show: { steps: ["Gladly.", { act: 'hug' }, { sfx: 'breath' }, "Hands first… then whatever you ask for."], then: 'sh_talk' },
   sh_touch: { steps: [
-    { act: 'hug' }, { sfx: 'mm' }, "Like this?", "You’re so warm under the water." ],
+    { act: 'hug' }, { sfx: 'mm' }, "Like this?", "You’re so sexy under the water." ],
     options: [
       { label: "“Keep going.”", next: 'sh_doit' },
       { label: "“Tease me more first.”", next: 'sh_tease' },
@@ -1287,10 +1287,10 @@ export const nodes: Record<string, Node> = {
   sh_doit: { steps: [{ act: 'hug' }, { sfx: 'heavy' }, { sfx: 'mm' }, "As you wish."], then: 'sh_hot' },
   sh_kiss: { steps: [{ act: 'kiss' }, "Mmm… steam and you."], then: 'sh_hot' },
   sh_hot: { steps: [
-    { thought: "Breathing against her neck. Water pouring over both." },
+    { thought: "I'm breathing against her neck. Water pouring over both." },
     { sfx: 'heavy' },
-    "You’re so warm…", "so soft around my fingers.",
-    "I could stay here forever,", "feeling you get wetter while the water runs down your thighs." ],
+    "You’re so hot…", "so soft around my fingers.",
+    "I could stay here forever naked with you,", "feeling you get wetter while the water runs down your thighs." ],
     options: [
       { label: "“Don’t stop.”", next: 'sh_more' },
       { label: "“I want more.”", next: 'sh_more' },

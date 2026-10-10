@@ -71,7 +71,7 @@ function ensure() {
   if (!audio) {
     audio = new Audio();
     audio.loop = true;
-    audio.volume = 0.10;
+    audio.volume = 0.05;
     audio.preload = 'auto';
     audio.crossOrigin = 'anonymous'; // needed when loading from CDN
   }
@@ -161,7 +161,7 @@ export function playSlot(world: string, slot: number, force = true) {
       a.src = src;
     }
     a.currentTime = 0;
-    a.volume = 0.10;
+    a.volume = 0.05;
     // wait briefly for CDN buffer so play doesn't start silent / delayed
     waitReady(a, 1800).then(() => {
       if (currentSlot !== idx || currentWorld !== world) return; // user already switched

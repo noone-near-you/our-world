@@ -152,7 +152,7 @@ export const SFX_FILES: Record<string, { file: string; vol: number }> = {
 };
 
 /** Adjust moan loudness here (0..1). Used in shower intimate moment. */
-export const MOAN_VOLUME =0.80;
+export const MOAN_VOLUME =0.70;
 /** Moan during intimate blackout: full clip, then restart from 0 when it ends. */
 let moanEl: HTMLAudioElement | null = null;
 let moanActive = false;

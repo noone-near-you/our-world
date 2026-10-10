@@ -34,18 +34,20 @@ export const nodes: Record<string, Node> = {
 
   start_afternoon: { steps: [
     { thought: "She’s taking long again…" },
-    { thought: "I keep thinking about her lips." },
-    { thought: "The way she looks when she’s half-asleep." },
-    { thought: "I miss her even when she’s just in the next room." } ], then: 'start_enter' },
+    { thought: "I keep thinking about her scent." },
+    { thought: "The way she looks when she smile" },
+    { thought: "Those beautiful rosy cheeks with melodious dimples." },
+    { thought: "I want to hold her in my arms." } ], then: 'start_enter' },
 
   start_evening: { steps: [
-    { thought: "Evening already… soft orange outside the window." },
-    { thought: "I want her head on my shoulder before the light goes." },
+    { thought: "Evening already… beautiful sky outside." },
+    { thought: "I want her head on my shoulder before the light goes..." },
+    { thought: "And a kiss on my lips from her." },
     { thought: "Come on… I’ve been waiting all day for this part." } ], then: 'start_enter' },
 
   start_night: { steps: [
-    { thought: "It’s late. Stars outside the glass." },
-    { thought: "The whole house is quiet except my thoughts about her." },
+    { thought: "It’s so late. Stars blinking like they're telling me about her." },
+    { thought: "The whole house is quiet except my dreams about her." },
     { thought: "I hope she walks in soon. Nights feel longer without her." } ], then: 'start_enter' },
 
   // she walks in (also used after lonely world-hopping)
@@ -59,7 +61,7 @@ export const nodes: Record<string, Node> = {
   start_enter_morning: { steps: [
     { sfx: 'step' }, { wait: 500 }, { gf: 'enter' },
     "Good morning…", { sfx: 'heh' },
-    "You’re finally here.", "Come here. The day feels better already." ],
+    "You’re finally here.", "I missed you. Now, The day feels better." ],
     options: [
       { label: "“Morning… I missed you.”", next: 'soft' },
       { label: "“You’re up early for me?”", next: 'flirt' },
@@ -69,15 +71,15 @@ export const nodes: Record<string, Node> = {
     { sfx: 'step' }, { wait: 500 }, { gf: 'enter' },
     "You’re finally here.", { sfx: 'chuckle' }, "Come here." ],
     options: [
-      { label: "“I was just outside… thinking about you.”", next: 'soft' },
+      { label: "“I was just… thinking about you.”", next: 'soft' },
       { label: "“Missed me that much already?”", next: 'flirt' },
       { label: "“I’m tired… hold me.”", next: 'soft' } ] },
 
   start_enter_evening: { steps: [
     { sfx: 'step' }, { wait: 500 }, { gf: 'enter' },
     "There you are…", { sfx: 'uhh' },
-    "The sky’s turning orange and I only wanted you in this room.",
-    "Come here." ],
+    "Did you see? Sky is stealing the color of your cheeks.",
+    "Come here babe." ],
     options: [
       { label: "“I like evenings with you.”", next: 'soft' },
       { label: "“You were waiting?”", next: 'flirt' },
@@ -87,11 +89,11 @@ export const nodes: Record<string, Node> = {
     { sfx: 'step' }, { wait: 500 }, { gf: 'enter' },
     "Hey…", { sfx: 'heh' },
     "It’s late. I was hoping you’d still come.",
-    "Come here. Closer." ],
+    "Come here princess. Closer." ],
     options: [
       { label: "“I couldn’t sleep without you.”", next: 'soft' },
       { label: "“Missed me that much?”", next: 'flirt' },
-      { label: "“I’m tired… hold me.”", next: 'soft' } ] },
+      { label: "“I’m tired… hug me.”", next: 'soft' } ] },
 
   // back to bedroom while still waiting for her
   solo_back_bedroom: { steps: [
@@ -99,7 +101,7 @@ export const nodes: Record<string, Node> = {
     { thought: "The bed still smells like her pillow." },
     { thought: "I’m nothing without her. I don’t even know how much I love her until the room is this quiet." },
     { sfx: 'breath' },
-    { thought: "Please… just come in." } ], then: 'start_enter' },
+    { thought: "Please babe… just come in." } ], then: 'start_enter' },
 
 
   soft: { steps: ["Come sit.", "I was thinking about your face the whole time.", "Especially your lips.", "They look soft today."],
@@ -113,10 +115,10 @@ export const nodes: Record<string, Node> = {
   okay: { steps: [{ sfx: 'agree' }, "…Okay. Your usual short reply.", "I know what that “okay” really means."], then: 'day' },
   kiss2: { steps: ["Again? Greedy.", { sfx: 'chuckle' }, "…I’m not complaining.", { act: 'kiss' }, { sfx: 'heh' }, "Okay. That one was for me."], then: 'day' },
 
-  day: { steps: ["How was your day?", { sfx: 'breath' }, "You look a little quiet.", "Everything okay?"],
-    options: [ { label: "“A bit stressed… just need you.”", next: 'comfort' }, { label: "“It was okay. I kept thinking about kissing you.”", next: 'think_kiss' }, { label: "“I’m fine. You look cute sitting there.”", next: 'cute' } ] },
+  day: { steps: ["With you, my day always become spicy.",{sfx: 'boylaugh'}, "How was your day?", { sfx: 'breath' }, "You look a little quiet.", "Everything okay?"],
+    options: [ { label: "“A bit stressed… just need you.”", next: 'comfort' }, { label: "“It was okay. I kept thinking about tasting you.”", next: 'think_kiss' }, { label: "“I’m fine. You look cute today.”", next: 'cute' } ] },
   comfort: { steps: [{ sfx: 'heh' }, "Come here.", "Lie on me.", "You don’t have to carry it alone.", "I’m right here.", { act: 'hug' }, { sfx: 'uhh' }], then: 'where' },
-  think_kiss: { steps: ["Oh, so we were thinking the same thing.", { sfx: 'heh' }, "Come here.", { act: 'kiss' }, "Better?"], then: 'where' },
+  think_kiss: { steps: ["Oh, so we were thinking the same thing.", { sfx: 'heh' }, "Come here girl.", { act: 'kiss' }, "Better?"], then: 'where' },
   cute: { steps: ["Cute? …Say that again.", { sfx: 'shy' }, "I’m blushing. Don’t look at me."], then: 'where' },
 
   where: { route: g => g.tod === 'night' ? 'where_night' : undefined,
@@ -188,7 +190,7 @@ export const nodes: Record<string, Node> = {
 
   solo_alone_pool: { steps: [
     { thought: "Blue water. Empty loungers." },
-    { thought: "I wanted her legs next to mine on that chair." },
+    { thought: "I wanted her next to mine on that chair." },
     { thought: "Even the sunlight feels like it’s waiting for her." },
     { sfx: 'hm' },
     { thought: "I miss her more than I say out loud." },
@@ -204,7 +206,7 @@ export const nodes: Record<string, Node> = {
     { thought: "I keep seeing her silhouette on the glass in my head." },
     { thought: "I’d trade every warm drop just to hear her step in." },
     { sfx: 'breath' },
-    { thought: "I’m nothing without her. Come on… where are you?" },
+    { thought: "I’m nothing without her. Come on… where are you girl?" },
     "She’s still not here." ],
     options: [
       { label: "(Wait a little more)", next: 'solo_alone_shower' },
@@ -229,7 +231,7 @@ export const nodes: Record<string, Node> = {
     "You’re here.",
     { sfx: 'uhh' },
     "I was missing you so hard even the plants started looking lonely.",
-    "Then you show up like the garden grew you just for me.",
+    "Then you show up like the princess of this garden.",
     { sfx: 'heh' },
     "Come here. Before I put a flower in your hair without asking." ], then: 'arrive_garden' },
 
@@ -237,7 +239,7 @@ export const nodes: Record<string, Node> = {
     { sfx: 'step' }, { wait: 400 }, { gf: 'enter' },
     { sfx: 'shy' }, "Oh… you’re here.",
     { sfx: 'heh' },
-    "I was staring at the water like an idiot, thinking about your voice.",
+    "I was staring at the water like an idiot, thinking about your lips.",
     "Now the ocean can shut up. You’re louder in my head anyway.",
     { sfx: 'chuckle' },
     "Come stand with me. I missed you more than the waves." ], then: 'arrive_beach' },
@@ -263,7 +265,7 @@ export const nodes: Record<string, Node> = {
     "Come closer. Before I say something dangerously soft." ], then: 'arrive_shower' },
 
   arrive_kitchen: { steps: [
-    { thought: "Soft evening light. The counter is clean." },
+    { thought: "Uhh damn, She's so close in." },
     { sfx: 'heh' }, "Come here.",
     "I’m hungry… but more for you than food.",
     "Still, let’s make something nice together." ],
@@ -282,7 +284,7 @@ export const nodes: Record<string, Node> = {
     "I’ll make whatever you want.",
     "Just stay close while I cook." ],
     options: [
-      { label: "“Paneer butter masala and rice.”", next: 'k_cook' },
+      { label: "“Rajma and rice.”", next: 'k_cook' },
       { label: "“Simple dal and roti.”", next: 'k_cook' },
       { label: "“Vegetable pulao and raita.”", next: 'k_cook' },
       { label: "“Pasta with white sauce.”", next: 'k_cook' },
@@ -294,13 +296,13 @@ export const nodes: Record<string, Node> = {
     "Come stand next to me.",
     // chopping first
     { sfx: 'chop' },
-    { thought: "Soft chopping sounds fill the kitchen." },
+    { thought: "Uhh, Is it the onion or her presence making me cry?" },
     "I like when you’re this close while I cook.",
     // then the pan / cooking sound
     { sfx: 'cooking' },
-    { thought: "Steam rises from the pot." },
+    { thought: "Damn, Even smell of steam mixing with her scent." },
     "Your presence makes even ordinary food feel special.",
-    "Like the kitchen suddenly became warmer." ],
+    "Like the kitchen suddenly became heaven." ],
     options: [
       { label: "“Kiss me while you cook.”", next: 'k_kiss' },
       { label: "“Let me help.”", next: 'k_help' },
@@ -325,7 +327,7 @@ export const nodes: Record<string, Node> = {
     options: [
       { label: "“Then burn it.”", next: 'k_burn' },
       { label: "“I’ll move… if you let me.”", next: 'k_move' },
-      { label: "“Slap me lightly then.”", next: 'k_slap' } ] },
+      { label: "“I'll tease you more.”", next: 'k_slap' } ] },
   k_burn: { steps: ["Ha. Don’t tempt me.", "Stay. I’ll risk it."], then: 'k_taste' },
   k_move: { steps: ["Not a chance.", "Stay right here."], then: 'k_taste' },
   k_slap: { steps: [
@@ -346,7 +348,7 @@ export const nodes: Record<string, Node> = {
   k_taste: { steps: [
     "Taste this.",
     "Open your mouth.",
-    { thought: "He feeds her a small spoonful with his hand." },
+    { thought: "She looks like a baby while I am feeding her." },
     "Tell me if it needs anything.",
     "I love feeding you." ],
     options: [
@@ -361,19 +363,20 @@ export const nodes: Record<string, Node> = {
   k_herfeed: { steps: [
     "I’m all yours.",
     "Feed me.",
-    { thought: "She feeds him a small bite." },
+    { thought: "She wants to feeds me a small bite. But yeah she is lazy." },
     { sfx: 'yummy' },
     "Perfect.",
-    "Anything tastes better when it comes from your hands." ],
+    "It taste little sweeter.",
+    "I guese because it comes from your sweet hands." ],
     options: [
       { label: "“More?”", next: 'k_morefeed' },
-      { label: "“You’re such a softie.”", next: 'k_softie' },
+      { label: "“You’re such a flirtie.”", next: 'k_softie' },
       { label: "“Kiss me after this.”", next: 'k_kissafter' } ] },
   k_morefeed: { steps: [
     "Okay… one more.",
     "Slowly.",
     { sfx: 'yummy' },
-    "I like watching your fingers near my mouth." ], then: 'k_almost' },
+    "I like the taste of your fingers." ], then: 'k_almost' },
   k_softie: { steps: ["Only for you.", "Don’t tell anyone."], then: 'k_almost' },
   k_kissafter: { steps: [{ act: 'kiss' }, { sfx: 'hm' }, "There. Paid in full."], then: 'k_almost' },
   k_almost: { steps: [
@@ -381,7 +384,7 @@ export const nodes: Record<string, Node> = {
     { sfx: 'uhh' }, "Come here.",
     "I want to hold you for a second before we eat.",
     { act: 'hug' },
-    "You smell like home and something sweet.",
+    "You smell like home and something like cinnamon.",
     "I could stay in this kitchen with you forever." ],
     options: [
       { label: "“Feed me properly now.”", next: 'k_dinner' },
@@ -408,13 +411,13 @@ export const nodes: Record<string, Node> = {
   k_feedhim: { steps: [
     "Please…",
     "Feed me, baby.",
-    { thought: "She feeds him. He smiles with his mouth full." },
+    { thought: "She is feeding me. My inner baby met his new mother." },
     "Mmm. Best chef in the house." ], then: 'k_after' },
   k_spoil: { steps: ["Good.", "That’s the plan."], then: 'k_after' },
   k_love: { steps: [
     "I love you more.",
-    "Even when you just say okay…",
-    "I still love you." ], then: 'k_after' },
+    "And you know that…",
+    "I am obsessed with you." ], then: 'k_after' },
   k_after: { steps: [
     "Kitchen’s a mess now…",
     "but I don’t care.",
@@ -427,7 +430,7 @@ export const nodes: Record<string, Node> = {
   k_clean: { steps: [
     { act: 'kiss' },
     { sfx: 'heh' }, "There. Clean.",
-    "Tastes better than the food, honestly." ], then: 'k_close' },
+    "Tastes better than the anything, honestly." ], then: 'k_close' },
   k_tobed: { steps: [
     { sfx: 'hm' }, "Okay. Let’s go home.",
     { go: 'bedroom' } ], then: 'arrive_bedroom' },
@@ -457,7 +460,7 @@ export const nodes: Record<string, Node> = {
     "Still the best thing in any room." ], then: 'k_close' },
   k_cuddle_later2: { steps: [
     "Special cuddle it is.",
-    "Bedroom. Blanket. No phones.",
+    "Bedroom. Blanket. No Barriers.",
     { go: 'bedroom' } ], then: 'cuddle' },
   k_close: { steps: [
     "I could stay in this kitchen with you forever.",
@@ -470,7 +473,7 @@ export const nodes: Record<string, Node> = {
   // kitchen replay — different from the first cook
   k_replay: { steps: [
     { sfx: 'heh' },
-    "Round two already?",
+    "You want something again?",
     { sfx: 'chuckle' },
     "Okay… but this time you pick faster.",
     "I’m hungrier for you than the food." ], then: 'k_choose' },
@@ -479,25 +482,25 @@ export const nodes: Record<string, Node> = {
     "Sit with me.",
     "Right here on this bench.",
     "I just want to look at you for a while.",
-    { thought: "They sit close. His shoulder touches hers." } ], then: 'gd_view' },
+    { thought: "We sit close, adoring the beauty of her." } ], then: 'gd_view' },
   gd_view: { steps: [
-    { sfx: 'breath' }, "You look even softer out here.",
-    "Like the garden grew you just for me." ],
+    { sfx: 'breath' }, "You look even more gorgeous out here.",
+    "Like this garden grew you just for me." ],
     options: [
       { label: "“You’re staring again.”", next: 'gd_v1' },
       { label: "“Come closer.”", next: 'gd_v2' },
       { label: "“I like it here with you.”", next: 'gd_v3' } ] },
-  gd_v1: { steps: [{ sfx: 'heh' }, "Guilty.", "I can’t help it."], then: 'gd_flower' },
+  gd_v1: { steps: [{ sfx: 'heh' }, "So what.", "I can’t help it, you're addictive"], then: 'gd_flower' },
   gd_v2: { steps: ["Closer? Always.", { act: 'hug' }, { sfx: 'uhh' }], then: 'gd_flower' },
   gd_v3: { steps: ["I like it too… only because you’re in it."], then: 'gd_flower' },
   gd_flower: { steps: [
     "Every time I look at you I want to do something small…",
     "like this.",
     { act: 'flower' },
-    { thought: "He gently plucks a tiny flower and carefully tucks it in her hair." },
+    { thought: "I gently plucked a tiny flower and carefully tucks it in her hair." },
     { sfx: 'chuckle' }, "There.",
     "Now you look like you belong to this place.",
-    "And to me." ],
+    "And ofcourse to me." ],
     options: [
       { label: "“Do it again.”", next: 'gd_again' },
       { label: "“You’re so soft with me.”", next: 'gd_soft' },
@@ -517,11 +520,12 @@ export const nodes: Record<string, Node> = {
   gd_keep: { steps: [{ act: 'flower' }, { sfx: 'fuhh' }, "Okay… one last one. Then I’m just going to stare."], then: 'gd_bench' },
   gd_hold: { steps: [{ sfx: 'hmm' }, "Come here.", { act: 'hug' }, { sfx: 'chuckle' }, "Better."], then: 'gd_bench' },
   gd_herflower: { steps: [
-    { thought: "She tucks a small flower into his hair." },
+    { thought: "She tucks a small flower into my hair." },
+    {thought : "I forget everything by her smile. Is she an angel?"},
     { sfx: 'chuckle' },
     "Now we match.",
     "Two people who look a little silly…",
-    "and completely in love." ], then: 'gd_bench' },
+    "and completely deep in love." ], then: 'gd_bench' },
   gd_bench: { steps: [
     "Your hand feels nice in mine.",
     "The air is quiet.",
@@ -536,7 +540,7 @@ export const nodes: Record<string, Node> = {
     "Okay…",
     "Your laugh. The way you lean on my shoulder.",
     "How every flower looks less bright next to you.",
-    "That’s what I’m thinking." ], then: 'gd_tease' },
+    "You make everything feel more beautiful." ], then: 'gd_tease' },
   gd_treekiss: { steps: [
     "Come here then.",
     { act: 'kiss' },
@@ -555,7 +559,7 @@ export const nodes: Record<string, Node> = {
     "Makes me want to tease you a little." ],
     options: [
       { label: "“Try it.”", next: 'gd_t1' },
-      { label: "“Soft slap only.”", next: 'gd_t2' },
+      { label: "“Htt.”", next: 'gd_t2' },
       { label: "“Just keep being soft.”", next: 'gd_t3' } ] },
   gd_t1: { steps: [{ act: 'tease' }, { sfx: 'shy' }, "Hey—!", { act: 'hug' }, "Come back."], then: 'gd_close' },
   gd_t2: { steps: [
@@ -565,12 +569,12 @@ export const nodes: Record<string, Node> = {
     "Now come back to me.",
     { act: 'hug' },
     "I only did it so I could hold you after." ], then: 'gd_close' },
-  gd_t3: { steps: [{ act: 'hug' }, { sfx: 'uhh' }, "Soft it is.", "Head on my shoulder. My fingers in your hair."], then: 'gd_close' },
+  gd_t3: { steps: [{ act: 'hug' }, { sfx: 'uhh' }, "Soft it is.", "Head on my shoulder. My fingers in your shiny hair."], then: 'gd_close' },
   gd_close: { steps: [
     "One more flower?",
     "Or do you want to stay like this…",
-    "head on my shoulder,",
-    "my fingers in your hair?" ],
+    "close to me,",
+    "me playing with your hair?" ],
     options: [
       { label: "“One more flower.”", next: 'gd_one_more' },
       { label: "“Stay like this.”", next: 'gd_stay' },
@@ -601,7 +605,7 @@ export const nodes: Record<string, Node> = {
     { pose: 'sit' },
     { set: { beachDone: true } },
     "Right here.",
-    "Sand under our feet… and you next to me.",
+    "Sand under our feet… and an angel next to me.",
     { sfx: 'sigh' },
     "I could stay like this all afternoon." ],
     options: [
@@ -613,7 +617,7 @@ export const nodes: Record<string, Node> = {
     { act: 'kiss' },
     { sfx: 'mm' },
     { sfx: 'foh' },
-    "You taste like salt air and trouble." ], then: 'bc_more' },
+    "You taste like crazy butterscotch." ], then: 'bc_more' },
   bc_hold: { steps: [
     { act: 'hug' },
     { sfx: 'chuckle' },
@@ -640,9 +644,9 @@ export const nodes: Record<string, Node> = {
     "Okay… but we’re still in our beach clothes.",
     { sfx: 'shy' },
     "I’m not swimming in this shirt.",
-    "Come on — bikini and trunks. Just for the water." ], then: 'bc_undress' },
+    "Come on — bikini and trunks?" ], then: 'bc_undress' },
   bc_undress: { steps: [
-    { set: { outfit: 'swim', naked: false, caption: 'a moment later… clothes left on the loungers' } },
+    { set: { outfit: 'swim', naked: false, caption: 'a moment later…' } },
     { wait: 400 },
     { sfx: 'breath' },
     "There. Better.",
@@ -716,7 +720,7 @@ export const nodes: Record<string, Node> = {
     "Hey—!",
     { set: { splash: true } },
     { sfx: 'giggle' },
-    "You’re soaked. Worth it." ], then: 'bc_inmore' },
+    "You’re soaked. Trying to make the place hotter?" ], then: 'bc_inmore' },
   bc_stay: { steps: [
     { pose: 'sit' },
     { set: { outfit: 'beach', naked: false } },
@@ -781,11 +785,11 @@ export const nodes: Record<string, Node> = {
   bed_off: { steps: [{ lamp: false }, { tod: 'night' }, { sfx: 'heh' }, "There. Just the moonlight now."], then: 'sleep_night' },
   bed_on: { steps: [{ tod: 'night' }, { sfx: 'hm' }, "Okay. I’ll leave it on until you drift off."], then: 'sleep_night' },
 
-  flirt: { steps: ["You’re looking at me like that again.", { sfx: 'chuckle' }, "Dangerous.", "You know what happens when you look at me like that."],
+  flirt: { steps: ["You’re looking at me like that again.", { sfx: 'chuckle' }, "Damn", "You know what happens when you look at me like that."],
     options: [ { label: "“What happens?”", next: 'flirt_what' }, { label: "“Kiss me before I change my mind.”", next: 'kiss1' }, { label: "“Call me something.”", next: 'flirt_call' } ] },
   flirt_what: { steps: ["Oh, you want me to say it out loud?", "Come here and find out.", { act: 'tease' }, "See? Dangerous."], then: 'flirt2' },
   flirt2: { steps: [], options: [ { label: "“Kiss me before I change my mind.”", next: 'kiss1' }, { label: "“Call me something.”", next: 'flirt_call' } ] },
-  flirt_call: { steps: ["Sexy.", "Your lips look like rose petals today.", "I keep wanting to bite them a little.", "You’re so hot when you pretend you’re not teasing me."],
+  flirt_call: { steps: ["Sexy.", "Your lips look like delicious rose petals today.", "I keep wanting to bite them a little.", "You’re so hot when you pretend you’re not teasing me."],
     options: [ { label: "“Keep talking.”", next: 'keep' }, { label: "“Shut up and kiss me.”", next: 'kiss1' }, { label: "“You’re such a flirt.”", next: 'flirt_slap' } ] },
   keep: { steps: ["Where do I even start?", "Your laugh. Your eyes when you’re sleepy.", "The way you steal my hoodie and pretend it’s an accident.", "All of it. Every little thing."], then: 'where' },
   flirt_slap: { steps: [{ act: 'slap' }, "Ow! What was that for?!", "I was literally just being sweet!"],
@@ -857,13 +861,13 @@ export const nodes: Record<string, Node> = {
 
   garden_plan: { steps: [
     "The garden?",
-    "Quiet. Flowers. Just us on that bench.",
+    "Quiet. Flowers. Just you in my arms.",
     "Come on." ], then: 'garden_go' },
   garden_go: { steps: [{ go: 'garden' }], then: 'arrive_garden' },
 
   pool_plan: { steps: [
     "The pool?",
-    "Indoor. Warm lights. Water up to our feet… then more if you want.",
+    "You wanna tease me more in the pool.",
     "Come on." ], then: 'pool_go' },
   pool_go: { steps: [{ go: 'pool' }], then: 'arrive_pool' },
 
@@ -883,7 +887,7 @@ export const nodes: Record<string, Node> = {
   pl_edge: { steps: [
     { sfx: 'sigh' },
     "Good.",
-    "I can feel your leg against mine.",
+    "I can feel, your touch is heating me up.",
     { sfx: 'uhh' },
     "Don’t move yet." ],
     options: [
@@ -893,8 +897,8 @@ export const nodes: Record<string, Node> = {
 
   pl_stare: { steps: [
     { sfx: 'heh' },
-    "Guilty.",
-    "Your lips look soft under these lights.",
+    "Yeahhhh.",
+    "Your lips look sweeter when they wet.",
     { sfx: 'shy' },
     "Come closer." ], then: 'pl_kiss' },
 
@@ -910,7 +914,7 @@ export const nodes: Record<string, Node> = {
     { sfx: 'mm' },
     "Mmm…",
     { sfx: 'sigh' },
-    "You taste like chlorine and trouble." ],
+    "You taste like juicy strawberry." ],
     options: [
       { label: "“Again.”", next: 'pl_kiss2' },
       { label: "“Let’s go in deeper.”", next: 'pl_in_ask' },
@@ -925,7 +929,7 @@ export const nodes: Record<string, Node> = {
   pl_hold: { steps: [
     { act: 'hug' },
     { sfx: 'heh' },
-    "Your back under my hands…",
+    "Your soft waist under my palm…",
     { sfx: 'sigh' },
     "I could stay on this edge forever." ], then: 'pl_in_ask' },
 
@@ -990,7 +994,8 @@ export const nodes: Record<string, Node> = {
     { act: 'hug' },
     { sfx: 'heh' },
     "You’re warm even in the cool water.",
-    "My hands on your shoulders… yours on mine.",
+    "My hands on your body… yours on mine.",
+    "I wanna do something…",
     { act: 'kiss' },
     { sfx: 'mm' },
     { sfx: 'giggle' },
@@ -1102,17 +1107,19 @@ export const nodes: Record<string, Node> = {
     "Okay. Slowly.",
     { act: 'hug' },
     "My hands know you already…",
-    "but I still want to learn every soft place again." ], then: 'pl_end' },
+    "but I still want to learn every soft place again." ,
+  "Like this…?", 
+    "Your boobs are so soft."], then: 'pl_end' },
 
   pl_close2: { steps: [
     { act: 'hug' },
     { sfx: 'hmm' },
     "Just this. Heartbeat against heartbeat.",
-    "Naked. Quiet. Yours." ], then: 'pl_end' },
+    "Naked. Yours." ], then: 'pl_end' },
 
   pl_private: { steps: [
     { sfx: 'chuckle' },
-    "Bedroom. Blanket. Lock the door.",
+    "Bedroom. Blanket. Skin to Skin.",
     "Come on… before I change my mind and keep you in this water all night." ],
     options: [
       { label: "“Let’s go.”", next: 'pl_tobed' },
@@ -1161,7 +1168,8 @@ export const nodes: Record<string, Node> = {
     "Feels even better the second time…",
     "like the water already knows your body.",
     { act: 'hug' },
-    "Come here. Closer than before." ],
+    "Come here. Closer than before.", 
+    "Lemme touch your skin again."  ],
     options: [
       { label: "“Touch me again.”", next: 'pl_hands' },
       { label: "“Kiss me slower this time.”", next: 'pl_wkiss' },
@@ -1180,7 +1188,7 @@ export const nodes: Record<string, Node> = {
   sh_go: { steps: [{ dress: 'swim', caption: 'getting ready…', pose: 'stand' }, { go: 'shower' }], then: 'arrive_shower' },
   arrive_shower: { steps: [
     { pose: 'stand' }, { set: { showerOn: false, steam: false } },
-    { thought: "They stand just outside the glass. Water not on yet." },
+    { thought: "We stand just outside the glass. Water not on yet." },
     "Stay with me a second.",
     "Right here… outside the glass. Before we step in." ],
     options: [
@@ -1190,7 +1198,7 @@ export const nodes: Record<string, Node> = {
   sh_pre_kiss: { steps: [{ act: 'kiss' }, { sfx: 'heh' }, "Okay. Now we go in."], then: 'sh_enter' },
   sh_enter: { steps: [
     { pose: 'wade' },
-    { thought: "They step into the glass stall." },
+    { thought: "We step into the glass stall." },
     { sfx: 'uhh' }, "Come here.",
     "I’ll turn the water on." ],
     options: [
@@ -1214,7 +1222,7 @@ export const nodes: Record<string, Node> = {
     { sfx: 'breath' },
     { set: { naked: true, steam: true, showerOn: true } },
     { thought: "Clothes come off. Steam wraps around them." },
-    { sfx: 'oh' }, "Damnn…", { sfx: 'breath' }, "You look unreal under the water.",
+    { sfx: 'oh' }, "Damnn…", { sfx: 'breath' }, "You look unreal & Sexy under the water.",
     "Every drop is running down places I keep thinking about." ],
     options: [
       { label: "“Like where?”", next: 'sh_where' },
@@ -1222,7 +1230,7 @@ export const nodes: Record<string, Node> = {
       { label: "“You’re the one looking dangerous.”", next: 'sh_danger' } ] },
   sh_where: { steps: [
     { sfx: 'chuckle' }, { thought: "Low voice, close to her ear." },
-    "Your breasts…", "the way water slides between them.",
+    "Your boobs…", "the way water slides between them.",
     "And lower…", "where you’re already soft and warm for me." ],
     options: [
       { label: "“Keep talking.”", next: 'sh_talk' },
@@ -1238,7 +1246,7 @@ export const nodes: Record<string, Node> = {
     { act: 'hug' }, { sfx: 'heh' },
     "I want my hands on your ass…",
     "pulling you against me so you can feel how hard I already am.",
-    "And then lower…", "fingers between your legs,",
+    "And then lower…", "fingers between your thighs,",
     { sfx: 'heavy' },
     "feeling how wet you are even under the water." ],
     options: [

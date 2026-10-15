@@ -21,7 +21,7 @@ export function blip(freq = 520, dur = 0.12, vol = 0.05) {
 
 export type Sfx =
   | 'step' | 'hug' | 'kiss' | 'tease' | 'poke' | 'slap' | 'wave'
-  | 'laugh' | 'sigh' | 'chuckle' | 'smile' | 'chime' | 'giggle' | 'song' | 'moan' | 'splash' | 'wave'
+  | 'laugh' | 'sigh' | 'chuckle' | 'smile' | 'chime' | 'giggle' | 'song' | 'moan' | 'splash'
   | 'click' | 'power'
   /* kitchen */
   | 'cooking' | 'chop' | 'yummy'
@@ -80,22 +80,6 @@ function vocal(base: number, shape: 'hum' | 'uh' | 'heh' | 'ha' | 'aw' | 'oh' | 
   o.start(t); o2.start(t); o.stop(t + dur + 0.03); o2.stop(t + dur + 0.03);
 }
 
-function voiceLaugh(base: number, count: number, gap: number, delay: number, vol: number) {
-  if (!ctx) return;
-  for (let i = 0; i < count; i++) {
-    const t = ctx.currentTime + delay + i * gap;
-    const o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
-    o.type = 'sawtooth';
-    o.frequency.setValueAtTime(base * (1 - i * 0.02), t);
-    o.frequency.exponentialRampToValueAtTime(base * (0.88 - i * 0.02), t + gap * 0.75);
-    f.type = 'bandpass'; f.frequency.value = base * 3.1; f.Q.value = 1.8;
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + gap * 0.8);
-    o.connect(f).connect(g).connect(ctx.destination);
-    o.start(t); o.stop(t + gap);
-  }
-}
 
 
 /**
@@ -318,96 +302,68 @@ export function sfx(name: Sfx) {
   getAudioCtx();
   if (!ctx) return;
   switch (name) {
+    // The only cases permitted to generate procedural sounds:
     case 'step':
-      // always procedural — no step.mp3 required; clear steps for her walk-in
-      getAudioCtx();
       footstep(0.28);
       break;
-    case 'hug':
-      // both of them react on a hug
-      playSfxOr('hug', 0.8, () => {});
-      setTimeout(() => playSfxOr('hug_girl', 0.85, () => { vocal(320, 'mm', 0.4, 0.14); }), 180);
-      break;
-    case 'kiss':
-      playSfxOr('kiss', 0.8, () => {});
-      break;
     case 'tease':
-      playSfxOr('tease', 0.6, () => {});
-      break;
-    case 'poke': tone(420, 640, 0.08, 0.1, 'triangle'); break;
-    case 'slap':
-      playSfxOr('slap', 0.7, () => {});
-      break;
-    case 'wave': tone(660, 880, 0.12, 0.07); tone(880, 990, 0.14, 0.07, 'sine', 0.14); break;
-    case 'laugh':
-      playSfxOr('laugh', 0.65, () => { voiceLaugh(400, 5, 0.11, 0, 0.18); voiceLaugh(170, 4, 0.13, 0.1, 0.16); });
-      break;
-    case 'girllaugh':
-      playSfxOr('girllaugh', 0.65, () => { voiceLaugh(420, 5, 0.1, 0, 0.18); });
-      break;
-    case 'boylaugh':
-      playSfxOr('boylaugh', 0.65, () => { voiceLaugh(165, 4, 0.14, 0, 0.17); });
-      break;
-    case 'giggle':
-      playSfxOr('giggle', 0.6, () => { voiceLaugh(520, 4, 0.08, 0, 0.16); voiceLaugh(190, 2, 0.12, 0.15, 0.1); });
-      break;
-    case 'softlaugh': voiceLaugh(380, 3, 0.11, 0, 0.14); break;
-    case 'chuckle':
-      playSfxOr('chuckle', 0.6, () => { voiceLaugh(155, 3, 0.13, 0, 0.16); });
-      break;
-    case 'smile':
-      playSfxOr('hehe', 0.55, () => { vocal(380, 'heh', 0.14, 0.16, 0); vocal(400, 'heh', 0.14, 0.14, 0.14); });
-      break;
-    case 'hehe':
-      playSfxOr('hehe', 0.6, () => {
-        vocal(400, 'heh', 0.13, 0.18, 0);
-        vocal(420, 'heh', 0.13, 0.16, 0.12);
-        vocal(390, 'heh', 0.12, 0.14, 0.24);
+      playSfxOr('tease', 0.6, () => {
+        tone(350, 570, 0.12, 0.07, 'triangle');
+        tone(570, 420, 0.13, 0.05, 'sine', 0.1);
       });
       break;
-    case 'heh':
-      playSfxOr('heh', 0.55, () => { vocal(165, 'heh', 0.16, 0.18); vocal(155, 'heh', 0.14, 0.14, 0.14); });
-      break;
-    case 'hmm':
-      playSfxOr('hmm', 0.7, () => { vocal(150, 'hum', 0.55, 0.26); vocal(145, 'mm', 0.4, 0.16, 0.18); });
-      break;
-    case 'mm':
-      playSfxOr('mm', 0.65, () => { vocal(170, 'mm', 0.4, 0.22); });
-      break;
-    case 'uhh':
-      playSfxOr('uhh', 0.6, () => { vocal(300, 'uh', 0.35, 0.2); });
-      break;
-    case 'shy':
-      playSfxOr('shy', 0.6, () => { vocal(340, 'uh', 0.3, 0.18); vocal(360, 'heh', 0.12, 0.12, 0.22); });
-      break;
-    case 'hm':
-      playSfxOr('hm', 0.6, () => { vocal(165, 'hum', 0.28, 0.2); });
-      break;
-    case 'agree':
-      playSfxOr('hm', 0.55, () => { vocal(155, 'hum', 0.25, 0.18); });
-      break;
-    case 'aww':
-      playSfxOr('aww', 0.6, () => { vocal(200, 'aw', 0.45, 0.2); vocal(320, 'aw', 0.35, 0.14, 0.08); });
-      break;
-    case 'oh':
-      playSfxOr('oh', 0.6, () => { vocal(175, 'oh', 0.3, 0.2); });
-      break;
-    case 'breath':
-      playSfxOr('breath', 0.55, () => { burst(0.4, 0.1, 700); tone(200, 140, 0.35, 0.05); });
-      break;
-    case 'chime': tone(880, 880, 0.55, 0.06); tone(1320, 1320, 0.65, 0.045, 'sine', 0.12); break;
-    case 'song': break;
-    case 'splash':
-      // water splash — cut at ~1.1s so it ends with the droplet animation (mp3 is much longer)
-      playSfxOr('splash', 0.85, () => {
-        burst(0.18, 0.42, 1800); burst(0.12, 0.3, 2400, 0.05);
-        tone(400, 180, 0.2, 0.09, 'sawtooth'); burst(0.25, 0.2, 900, 0.1);
-      }, 1100);
+    case 'slap':
+      playSfxOr('slap', 0.7, () => {
+        burst(0.09, 0.35, 1600);
+        tone(180, 75, 0.11, 0.12, 'triangle');
+      });
       break;
     case 'wave':
       playSfxOr('wave', 0.55, () => {
-        burst(0.7, 0.07, 350); tone(90, 50, 1.2, 0.05, 'sine'); burst(0.5, 0.06, 280, 0.3);
+        burst(0.7, 0.07, 350);
+        tone(90, 50, 1.2, 0.05, 'sine');
+        burst(0.5, 0.06, 280, 0.3);
       });
+      break;
+    case 'breath':
+      playSfxOr('breath', 0.55, () => {
+        burst(0.4, 0.1, 700);
+        tone(200, 140, 0.35, 0.05);
+      });
+      break;
+    case 'splash':
+      playSfxOr('splash', 0.85, () => {
+        burst(0.18, 0.42, 1800);
+        burst(0.12, 0.3, 2400, 0.05);
+        tone(400, 180, 0.2, 0.09, 'sawtooth');
+        burst(0.25, 0.2, 900, 0.1);
+      }, 1100);
+      break;
+    case 'cooking':
+      playSfxOr('cooking', 0.7, () => {
+        burst(0.5, 0.08, 400);
+        tone(120, 90, 0.6, 0.06);
+      });
+      break;
+    case 'agree':
+      playSfxOr('agree', 0.7, () => {
+        vocal(155, 'hum', 0.25, 0.18);
+      });
+      break;
+
+    // Every other case: recorded audio only, with NO generated fallback.
+    // Unmapped keys (e.g. poke/chime) try /sfx/<key>.mp3 and stay silent if missing.
+    case 'hug':
+      playSfxOr('hug', 0.8, () => {});
+      setTimeout(() => playSfxOr('hug_girl', 0.85, () => {}), 180);
+      break;
+    case 'kiss': case 'poke': case 'laugh': case 'girllaugh':
+    case 'boylaugh': case 'giggle': case 'softlaugh': case 'chuckle':
+    case 'smile': case 'hehe': case 'heh': case 'hmm': case 'mm':
+    case 'uhh': case 'shy': case 'hm': case 'aww': case 'oh':
+    case 'chime': case 'sigh': case 'chop': case 'yummy':
+    case 'foh': case 'fuhh': case 'female_mm':
+      playSfxOr(name, 0.6, () => {});
       break;
     case 'moan': {
       const meta = SFX_FILES.moan;
@@ -415,39 +371,18 @@ export function sfx(name: Sfx) {
         const m = new Audio(`/sfx/${meta?.file ?? 'moan.mp3'}`);
         m.volume = meta?.vol ?? MOAN_VOLUME;
         m.play().catch(() => {});
-      } catch { /* */ }
+      } catch { /* no generated fallback */ }
       break;
     }
-    case 'female_mm':
-      playSfxOr('female_mm', 0.75, () => { vocal(340, 'mm', 0.35, 0.18); });
-      break;
-    case 'sigh':
-      playSfxOr('sigh', 0.55, () => { burst(0.45, 0.1, 900); vocal(150, 'hum', 0.5, 0.12, 0.05); });
-      break;
-    case 'cooking':
-      playSfxOr('cooking', 0.7, () => { burst(0.5, 0.08, 400); tone(120, 90, 0.6, 0.06); });
-      break;
-    case 'chop':
-      playSfxOr('chop', 0.75, () => {
-        burst(0.05, 0.2, 2000); burst(0.05, 0.18, 1800, 0.12); burst(0.05, 0.16, 2200, 0.24);
-      });
-      break;
-    case 'yummy':
-      playSfxOr('yummy', 0.85, () => { vocal(360, 'mm', 0.35, 0.2); vocal(400, 'mm', 0.25, 0.14, 0.15); });
-      break;
-    case 'foh':
-      playSfxOr('foh', 0.8, () => { vocal(360, 'oh', 0.3, 0.18); });
-      break;
-    case 'fuhh':
-      playSfxOr('fuhh', 0.8, () => { vocal(320, 'uh', 0.35, 0.18); });
-      break;
     case 'heavy':
-      // start looping; stop with heavy_stop when touch ends
       startHeavyBreath();
       break;
     case 'heavy_stop':
       stopHeavyBreath();
       break;
+    case 'song':
+      break;
+
   }
 }
 

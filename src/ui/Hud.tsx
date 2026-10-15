@@ -262,7 +262,7 @@ function EarphoneThenBrightness() {
   const land = useLandscape();
   useEffect(() => {
     if(!land) return;
-    const t = setTimeout(() => set({ intro: 'brightness' }), 8000);
+    const t = setTimeout(() => set({ intro: 'brightness' }), 5000);
     return () => clearTimeout(t);
   }, [land]);
   return (
@@ -278,7 +278,7 @@ function BrightnessAuto() {
   const land = useLandscape();
   useEffect(() => {
     if(!land) return;
-    const t = setTimeout(() => set({ intro: 'gate' }), 8000);
+    const t = setTimeout(() => set({ intro: 'gate' }), 5000);
     return () => clearTimeout(t);
   }, [land]);
   return (

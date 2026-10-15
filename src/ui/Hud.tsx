@@ -265,13 +265,26 @@ function EarphoneThenBrightness() {
     const t = setTimeout(() => set({ intro: 'brightness' }), 5000);
     return () => clearTimeout(t);
   }, [land]);
-  return (
-    <div className="intro-screen pre-screen" key="earphone">
+ 
+return (
+    <div
+      className="intro-screen pre-screen"
+      key="earphone"
+      onClick={() => set({ intro: 'brightness' })}
+      onTouchEnd={() => set({ intro: 'brightness' })}
+      style={{ cursor: 'pointer' }}
+    >
       <div className="pre-icon warn-icon" aria-hidden>⚠️</div>
       <p className="pre-title">Please plug in earphones</p>
-      <p className="pre-sub">This experience uses soft audio and intimate sounds.<br />Headphones are recommended</p>
+      <p className="pre-sub">
+        This experience uses soft audio and intimate sounds.
+        <br />
+        Headphones are recommended
+      </p>
+      <p className="intro-hint">Tap anywhere to continue</p>
     </div>
   );
+
 }
 
 function BrightnessAuto() {
@@ -281,13 +294,26 @@ function BrightnessAuto() {
     const t = setTimeout(() => set({ intro: 'gate' }), 5000);
     return () => clearTimeout(t);
   }, [land]);
-  return (
-    <div className="intro-screen pre-screen" key="brightness">
-      <div className="pre-icon" aria-hidden>🔆</div>
-      <p className="pre-title">Increase brightness & volume</p>
-      <p className="pre-sub">Turn up screen brightness and headphone volume<br />for the best experience.</p>
-    </div>
-  );
+  
+return (
+  <div
+    className="intro-screen pre-screen"
+    key="brightness"
+    onClick={() => set({ intro: 'gate' })}
+    onTouchEnd={() => set({ intro: 'gate' })}
+    style={{ cursor: 'pointer' }}
+  >
+    <div className="pre-icon" aria-hidden>🔆</div>
+    <p className="pre-title">Increase brightness &amp; volume</p>
+    <p className="pre-sub">
+      Turn up screen brightness and headphone volume
+      <br />
+      for the best experience.
+    </p>
+    <p className="intro-hint">Tap anywhere to continue</p>
+  </div>
+);
+
 }
 /** Opening: welcome → story typing → enter world */
 function Intro() {

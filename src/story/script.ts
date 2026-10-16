@@ -16,7 +16,7 @@ import type { Opt, Game } from '../state/store';
 export type Act = 'hug' | 'kiss' | 'tease' | 'slap' | 'flower' | 'feed' | 'hold';
 export type Step = string | { thought: string } | { act: Act } | { sfx: Sfx } | { gf: 'enter' } | { tod: 'morning' | 'afternoon' | 'evening' | 'night' } | { wait: number }
   | { lamp: boolean } | { pose: Game['pose'] } | { sleepy: number } | { skip: string; ms?: number; intimate?: boolean } | { scene: boolean }
-  | { dress: 'casual' | 'beach' | 'swim'; caption?: string; pose?: Game['pose'] } | { set: Partial<Game> } | { go: string } | { tone: 'soft' | 'tease' };
+  | { dress: 'casual' | 'beach' | 'swim'; caption?: string; pose?: Game['pose'] } | { set: Partial<Game> } | { go: string } | { tone: 'soft' | 'tease' } | { ring: true };
 export interface Node { steps: Step[]; options?: Opt[]; then?: string; route?: (g: Game) => string | undefined }
 
 export const nodes: Record<string, Node> = {
@@ -1485,6 +1485,49 @@ mk('rhd_many', ["We’ve been holding hands this whole time, haven’t we?", "I�
   ["“Me neither.”", ["Good. Then it’s settled.", "Forever, then."]],
   ["“My hand is falling asleep.”", ["Okay… switching hands.", "I’ll hold the other one."]],
   ["“Never let go.”", ["Promise.", "Cross my heart."]]]);
+
+// ====================== SECRET: the proposal (started from engine.startProposal) ======================
+nodes['prop_1'] = { steps: [
+  { pose: 'stand' },
+  { wait: 600 },
+  "…There you are. Wow.",
+  "You look like something out of a dream tonight.",
+  "Do you see all these people? Everyone you love is here.",
+  "I might have planned this for a very, very long time.",
+  { thought: "Breathe. Just breathe." },
+  "I had a whole speech. It left me the second I saw you.",
+  "So I’ll just tell you the truth." ], then: 'prop_2' };
+nodes['prop_2'] = { steps: [
+  { pose: 'kneel' }, { sfx: 'aww_crowd' }, { wait: 500 },
+  "From the first day, you were my favourite person.",
+  "You make every ordinary day feel like a celebration.",
+  "I don’t want a single day of my life without you in it.",
+  "So… I brought something.",
+  { ring: true },
+  { wait: 400 },
+  "…Will you marry me?" ],
+  options: [
+    { label: '“Yes! A thousand times yes!”', next: 'prop_yes' },
+    { label: '“Yes… of course I will.”', next: 'prop_yes' },
+    { label: '“Ask me again. I want to hear it twice.”', next: 'prop_again' } ] };
+nodes['prop_again'] = { steps: [ "Ha… okay. Deep breath.", "Will you marry me?" ], options: [
+  { label: '“Yes. Forever, yes.”', next: 'prop_yes' },
+  { label: '“Yes! Now get up here and kiss me.”', next: 'prop_yes' } ] };
+nodes['prop_yes'] = { steps: [
+  { sfx: 'cheer' }, { wait: 1400 },
+  { pose: 'stand' },
+  "She said yes… She actually said yes.",
+  { act: 'hug' },
+  { set: { fireworks: true } }, { wait: 1200 },
+  "Look up. Those are all for you.",
+  { wait: 2500 },
+  { act: 'kiss' },
+  "I love you. Today, tomorrow… always.",
+  { wait: 3000 },
+  "Let’s watch them together. Just us, for a minute.",
+  { wait: 9000 } ], then: 'prop_end' };
+nodes['prop_end'] = { steps: [ "Every star is jealous of us tonight.", "Ready to go home, my fiancée?" ], options: [
+  { label: '“Take me home.”', world: 'bedroom' } ] };
 export const exchanges: Record<Act, { pool: string[]; many: string }> = {
   feed: { pool: ['rf1', 'rf2'], many: 'rf_many' }, hold: { pool: ['rhd1', 'rhd2'], many: 'rhd_many' },
   kiss: { pool: ['rk1', 'rk2', 'rk3'], many: 'rk_many' }, hug: { pool: ['rh1', 'rh2', 'rh3'], many: 'rh_many' },

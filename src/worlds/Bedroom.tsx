@@ -9,6 +9,7 @@ import type { Act } from '../story/script';
 import { anch, tk, tkx, dsc, mood, wet, HEADW, BODY } from './anchors';
 import { DiscoLights, PetalRain, BubbleBurst, BeachBall, Birds, Scorpions, Fireflies, Rain } from './Effects';
 import { BeachSet, PoolSet, SKY } from './BeachSet';
+import { ProposalSet } from './Proposal';
 
 import { ACTS, Person, mat, Ell, Cap, type Ctl, type V3 } from './rig';
 
@@ -570,9 +571,11 @@ const CFG: Record<string, { bg: string; hemi: [string, string, number]; sun: [st
   kitchen: { bg: '#2b211a', hemi: ['#fff1d8', '#6a5a48', 1], sun: ['#ffe8c0', 1.2], lamp: 3, Set: KitchenSet },
   garden: { bg: '#bfe3f5', hemi: ['#fff6e0', '#6a8f4a', 1.15], sun: ['#fff0c8', 2.2], lamp: 0, Set: GardenSet },
   beach: { bg: '#6fc4f6', hemi: ['#f2f8ff', '#d9c28a', 1.25], sun: ['#fff4d8', 2.3], lamp: 0, Set: BeachSet },
+  proposal: { bg: '#050a1c', hemi: ['#8fa0d8', '#232844', 0.9], sun: ['#a8b8ff', 0], lamp: 0, Set: ProposalSet },   // secret world (never listed in the world picker)
   pool: { bg: '#c8b8a0', hemi: ['#fff0e0', '#8a7a68', 1.05], sun: ['#ffe8c8', 0.6], lamp: 2.2, Set: PoolSet },
   shower: { bg: '#2a3038', hemi: ['#e8f0f6', '#6a7888', 1.1], sun: ['#d8e4f0', 1.3], lamp: 2, Set: ShowerSet },
 };
+let propFov = 46;
 const RAIN_BG = new THREE.Color('#6f7d8a');
 const _tint = new THREE.Color(), _warm = new THREE.Color('#ffbf70');
 const NIGHT_BG = new THREE.Color('#0d1226'), DISCO_BG = new THREE.Color('#120a24');
@@ -585,7 +588,7 @@ function Scene({ ctl }: { ctl: Ctl }) {
   const tod = g0.tod, world = g0.world, cfg = CFG[world] ?? CFG.bedroom;
   const lampOn = g0.lamp, pose = g0.pose;
   const amb = useRef<THREE.AmbientLight>(null!), moon = useRef<THREE.DirectionalLight>(null!), tbl = useRef<THREE.PointLight>(null!);
-  const rg = useRef({ bw: 0, sw: 0, hw: 0 }), fog = useRef(new THREE.Fog('#6fc4f6', 28, 80)), hemi = useRef<THREE.HemisphereLight>(null!), lamp = useRef<THREE.PointLight>(null!), sun = useRef<THREE.DirectionalLight>(null!), st = useRef({ x: 1.9, lx: 0.6 }), bg = useRef(new THREE.Color());
+  const rg = useRef({ bw: 0, sw: 0, hw: 0 }), fog = useRef(new THREE.Fog('#6fc4f6', 28, 80)), pfog = useRef(new THREE.Fog('#0a1230', 45, 150)), hemi = useRef<THREE.HemisphereLight>(null!), lamp = useRef<THREE.PointLight>(null!), sun = useRef<THREE.DirectionalLight>(null!), st = useRef({ x: 1.9, lx: 0.6 }), bg = useRef(new THREE.Color());
 
   // hard-snap lighting colors when world changes (args only apply on first mount)
   useEffect(() => {
@@ -630,6 +633,7 @@ function Scene({ ctl }: { ctl: Ctl }) {
     const liveAct = !!ctl.current.act && T - ctl.current.t0 < ACTS[ctl.current.act].dur;
     tkx.ba = D(tkx.ba, onOut && pz === 'rest' && !liveAct ? 1.05 : 0.55, 2.5, dt);
     if (onB) { bg.current.copy(SKY.day).lerp(SKY.dusk, tkx.d).lerp(NIGHT_BG, tk.v); scene.background = bg.current; fog.current.color.copy(bg.current); scene.fog = fog.current; sun.current.color.set('#fff4d8').lerp(new THREE.Color('#ff9a55'), tkx.d); sun.current.intensity *= 1 - 0.45 * tkx.d; hemi.current.intensity *= 1 - 0.25 * tkx.d; }
+    else if (worldNow === 'proposal') { scene.background = bg.current.set('#050a1c'); scene.fog = pfog.current; }
     else { scene.fog = null; scene.background = bg.current.set(cfgNow.bg).lerp(NIGHT_BG, tk.v); }
     // bedroom mood light: tint the lamps + room light with the chosen colour
     mood.w = D(mood.w, worldNow === 'bedroom' && g.tint ? 1 : 0, 3, dt);
@@ -665,6 +669,13 @@ function Scene({ ctl }: { ctl: Ctl }) {
     const beachCamX = onB ? L(L(st.current.x, -0.5, bb), 2.6, R2.sw) : L(L(st.current.x, -0.5, bb), 3.4, R2.sw);
     cam.position.set(beachCamX, L(L(onP ? 2.6 : 2.6, 5.0, bb) - 0.3 * R2.bw, 2.5, R2.sw), L(camZ, 3.8, R2.sw));
     cam.lookAt(beachLookX, L(L(1.2, 1.15, bb) + 0.5 * R2.bw, 1.05, R2.sw), beachLookZ);
+    if (worldNow === 'proposal') {   // secret proposal: wide, slightly low stage view so the stage, crowd, mountains and fireworks all fit
+      const kn = pz === 'kneel';
+      propFov = D(propFov, (asp >= 1.6 ? 46 : Math.min(74, 46 * 1.6 / asp)) * z * (kn ? 0.82 : 1), 3, dt);
+      cam.fov = propFov;
+      cam.position.set(Math.sin(T * 0.12) * 0.6, kn ? 1.5 : 1.9, 8.4);
+      cam.lookAt(0, kn ? 1.7 : 2.6, -2);
+    }
     cam.updateProjectionMatrix(); cam.updateMatrixWorld();
     // always follow real head positions (sit on shower bench, stand, wade…) except pure bed-lie uses fixed anchors
     const walkAbout = pz === 'stand' || pz === 'wade' || pz === 'swim' || pz === 'sit' || worldNow !== 'bedroom';
@@ -695,6 +706,7 @@ function Scene({ ctl }: { ctl: Ctl }) {
       {world === 'garden' && <><GardenSet /><PetalRain /><Birds kind="garden" /><Fireflies area="garden" /><Rain /></>}
       {world === 'beach' && <><BeachSet /><Birds kind="gull" /><Scorpions /><BeachBall /><Fireflies area="beach" /><Rain /></>}
       {world === 'pool' && <><PoolSet /><DiscoLights /></>}
+      {world === 'proposal' && <ProposalSet />}
       {world === 'shower' && <ShowerSet />}
     </group>
     <PoolClothes />

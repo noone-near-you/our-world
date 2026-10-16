@@ -290,11 +290,12 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
   const gLive = get();
   REAL.on = gLive.look !== 'anime';
   const outfit = gLive.outfit, world = gLive.world, naked = gLive.naked;
-  const beach = outfit === 'beach', swim = outfit === 'swim';
+  const beach = outfit === 'beach', swim = outfit === 'swim', wed = outfit === 'wedding';
   const seed = gLive.clothSeed ?? 1;
   // random palette per character + seed so colors change every world / outfit swap
   const palette = useMemo(() => {
     const rng = seeded(seed + i * 9973);
+    if (wed) return { top: long ? '#fbfaf6' : '#17171c', pants: long ? '#fbfaf6' : '#121216', hat: '#ffffff' };   // bride in white, groom in a black suit
     if (swim || naked) {
       return {
         top: skin,
@@ -314,11 +315,11 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
       pants: long ? pick(rng, CASUAL_PANTS_HER) : pick(rng, CASUAL_PANTS_HIM),
       hat: long ? pick(rng, HAT_BANDS_HER) : pick(rng, HAT_BANDS_HIM),
     };
-  }, [seed, i, swim, naked, beach, long, skin]);
+  }, [seed, i, swim, naked, beach, wed, long, skin]);
   const top = palette.top, pants = palette.pants;
   const floral = useMemo(() => (beach && !long && !naked ? floralTex(seed) : null), [beach, long, naked, seed]);
   const d = i === 0 ? 1 : -1, b0 = useMemo(() => base(d), [d]), cur = useRef<P>({ ...b0 }), blinkAt = useRef(2 + i), corr = useRef(new THREE.Vector3()), lag = useRef({ y: 0, p: 0, r: 0 });
-  const W = useRef({ stage: i === 1 ? 0 : 2, turn: 0, ph: 0, s: i === 1 ? 1 : 0, yaw: 0, lie: 0, sink: 0, sp: 1, tr: 0, lastWorld: '' });   // stage: 0 walking in, 1 turning round, 2 seated
+  const W = useRef({ stage: i === 1 ? 0 : 2, turn: 0, ph: 0, s: i === 1 ? 1 : 0, yaw: 0, lie: 0, sink: 0, sp: 1, tr: 0, lastWorld: '', kn: 0 });   // stage: 0 walking in, 1 turning round, 2 seated
   const O = useRef<Record<string, THREE.Object3D>>({}), o = (k: string) => (n: THREE.Object3D | null) => { if (n) O.current[k] = n; };
   const hip = [useRef<THREE.Group>(null!), useRef<THREE.Group>(null!)], knee = [useRef<THREE.Group>(null!), useRef<THREE.Group>(null!)];
   const trim = useMemo(() => tl(top, 0.78), [top]), shine = useMemo(() => lt(hc, 0.5), [hc]), eyeC = REAL.on ? (long ? '#5b3a29' : '#4b3a2c') : (long ? '#7a4a6a' : '#4a6a8a'), lipC = long ? '#e8808a' : '#d98a84';
@@ -336,8 +337,16 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
     const g = get(), bedP = g.pose === 'bed';   // lying in bed: on their sides under the blanket, facing us, heads on the pillows
     let tgt: P = bedP ? { ...b0, yaw: 0, hy: 0, hp: 0.08, hr: -0.75, x: 0, nS: -0.1, nE: -0.45, fS: -0.1, fE: -0.45, sm: 0.55, bl: 0.5 } : c.act && t >= 0 && t < ACTS[c.act].dur ? sample(ACTS[c.act].rows, t, i, b0) : b0;
     const standP = g.pose === 'stand', wadeP = g.pose === 'wade', swimP = g.pose === 'swim', restP = g.pose === 'rest', onBeach = g.world === 'beach', onPool = g.world === 'pool', onLounger = onBeach || onPool, liveAct = !!c.act && t >= 0 && t < ACTS[c.act].dur;
+    const onProp = g.world === 'proposal', kneelHim = onProp && g.pose === 'kneel' && i === 0;   // secret proposal world
     if (!bedP && !liveAct) {
-      if (standP || (wadeP && !onPool && !onBeach)) tgt = { ...tgt, ...(long ? { yaw: d * 0.22, roll: d * 0.07, hy: d * 0.3, hp: 0.02, hr: -d * 0.16, sm: 0.7, bl: 0.35, br: 0.1, nik: 1, fik: 1, nfc: 0.2, ffc: 0.15, nic: 0.1, fic: 0.15 } : { yaw: d * 0.15, hy: d * 0.3, sm: 0.7, nik: 0, fik: 1, ffc: 0.3 }), ...(wadeP ? { yaw: d * 0.5, hy: d * 0.5, nik: 0, fik: 0, nS: -0.5, nZ: -d * 0.1, nE: -0.3, fS: -0.15, fE: -0.2, sm: 0.9 } : {}) };
+      if (onProp) {
+        const kn = g.pose === 'kneel';
+        tgt = { ...tgt, yaw: d * 0.3, hy: d * 0.5, sm: 0.75, bl: 0.45, eye: 0.9, ...(kn
+          ? (i === 0 ? { lean: 0.07, hp: -0.22, hy: d * 0.45, sm: 0.85, nik: 1, nfc: 0.25, nic: 0.2, fS: -0.35, fE: -1.0 }
+                     : { hp: 0.2, hy: d * 0.5, sm: 0.7, mo: 0.12, bl: 0.85, br: 0.5, eye: 0.85, nik: 1, nfc: 0.3, nic: 0.2, fS: -0.55, fE: -1.2 })
+          : { nik: 1, nfc: 0.5, nic: 0.45, hr: i === 1 ? -d * 0.08 : 0 }) };
+      }
+      else if (standP || (wadeP && !onPool && !onBeach)) tgt = { ...tgt, ...(long ? { yaw: d * 0.22, roll: d * 0.07, hy: d * 0.3, hp: 0.02, hr: -d * 0.16, sm: 0.7, bl: 0.35, br: 0.1, nik: 1, fik: 1, nfc: 0.2, ffc: 0.15, nic: 0.1, fic: 0.15 } : { yaw: d * 0.15, hy: d * 0.3, sm: 0.7, nik: 0, fik: 1, ffc: 0.3 }), ...(wadeP ? { yaw: d * 0.5, hy: d * 0.5, nik: 0, fik: 0, nS: -0.5, nZ: -d * 0.1, nE: -0.3, fS: -0.15, fE: -0.2, sm: 0.9 } : {}) };
       else if ((onPool || onBeach) && (wadeP || swimP)) {
         // calm in water (pool or ocean): face each other, hug-ready — no puppet swimming
         tgt = { ...tgt,
@@ -371,6 +380,8 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
       } else if (g.world === 'shower') {
         // approach from outside the open front of the stall
         rp.set(i === 0 ? -0.5 : 0.5, 0, 2.4); w.sink = 0; w.s = 1; w.stage = 2;
+      } else if (g.world === 'proposal') {
+        rp.set(i === 0 ? -4.8 : 4.8, 0, -1.2); w.sink = 0; w.s = 1; w.stage = 2;   // they walk onto the stage from either side
       } else if (g.world === 'pool') {
         const sideX = i === 0 ? -5.2 : 5.2;
         rp.set(sideX, 0, 0.8); w.sink = 0; w.s = 1; w.stage = 2;
@@ -389,7 +400,9 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
     // pool: sit = on tiled edge feet in water; wade/swim = in the water facing each other
     // beach shoreline is diagonal through (0,-3.5). Depth needs z past the local shore line.
     // wade ≈ knee depth, swim ≈ waist depth.
-    const SPOT: Record<string, [number, number][]> = onShower
+    const SPOT: Record<string, [number, number][]> = onProp
+      ? { stand: [[-0.4, -1.2], [0.4, -1.2]], kneel: [[-0.72, -1.2], [0.32, -1.2]], sit: [[-0.44, -1.2], [0.44, -1.2]] }
+      : onShower
       ? {
           stand: [[-0.45, 1.15], [0.4, 1.15]],
           sit: [[-0.45, 1.15], [0.4, 1.15]],
@@ -418,10 +431,10 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
     let gs = SPOT[g.pose]?.[i] ?? (onShower ? [x * 0.45, 1.15] : [x, -0.55]);
     // during hug/kiss in water: pull them almost together so arms actually wrap
     if (liveAct && (c.act === 'hug' || c.act === 'kiss') &&
-    ((onBeach && (g.pose === 'wade' || g.pose === 'swim')) ||
+    (onProp || (onBeach && (g.pose === 'wade' || g.pose === 'swim')) ||
      (onShower && (g.pose === 'wade' || g.pose === 'swim')))) {
       const midX = (SPOT[g.pose][0][0] + SPOT[g.pose][1][0]) * 0.5;
-      const closeX = i === 0 ? midX - 0.22 : midX + 0.22;
+      const gapX = onProp ? 0.31 : 0.22, closeX = i === 0 ? midX - gapX : midX + gapX;
       gs = [closeX, SPOT[g.pose][i][1]];
     }
     // beach → water: walk RIGHT around loungers, then into the ocean (never through benches)
@@ -489,7 +502,7 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
     let walkB = false, faceYaw = 0;
     if ((i === 0 || w.stage === 2) && !bedP) { const dx = gs[0] - rp.x, dz = gs[1] - rp.z, dist = Math.hypot(dx, dz);
       // short slide on dry ground; also allow slide during beach hug/kiss so they close the gap
-      const actClose = liveAct && (c.act === 'hug' || c.act === 'kiss') && (onBeach || onShower);
+      const actClose = liveAct && (c.act === 'hug' || c.act === 'kiss') && (onBeach || onShower || onProp);
       const canSlide = dist < 1.2 && w.stage === 2 && (actClose || (!onBeach && !(onPool && (Math.abs(rp.x) < 4.0 && rp.z > -3.95 && rp.z < 0.9))));
       if (dist > 0.03) {
         if (canSlide) {
@@ -513,7 +526,7 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
     const sinkT = onPool ? poolSink : beachSink;
     // slow damp so waterline climbs / drops gradually as they walk in or out
     w.sink = D(w.sink, sinkT, onPool ? 1.6 : 2.4, dt); BODY[i].x = rp.x; BODY[i].z = rp.z; BODY[i].sink = w.sink;
-    const walking = walkA || walkB, standing = (i === 1 && w.stage < 2) || walkB || standP || wadeP || swimP;
+    const walking = walkA || walkB, standing = (i === 1 && w.stage < 2) || walkB || standP || wadeP || swimP || (g.pose === 'kneel' && i === 1);
     // pool sit keeps them "seated" (ss→0) so legs can dangle; other sitting uses same
     w.s = D(w.s, standing ? 1 : 0, w.stage === 2 ? 3.5 : 20, dt);
     // pool sit on back edge: face +Z (toward camera / pool interior) so legs hang over the water — that's
@@ -521,7 +534,7 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
     // so no override is needed here (unlike the old right-edge seat, which had to face sideways).
     // in-water (pool or beach): face each other so hug/kiss connect
     const inWaterFace = (onPool || onBeach) && (g.pose === 'wade' || g.pose === 'swim')
-      ? (i === 0 ? 0.55 : -0.55) : 0;
+      ? (i === 0 ? 0.55 : -0.55) : (onProp && !walkB && (g.pose === 'stand' || g.pose === 'kneel')) ? (i === 0 ? 1.0 : -1.0) : 0;
     const tyaw = walkA ? -Math.PI / 2 : walkB ? faceYaw : inWaterFace;
     const dy = Math.atan2(Math.sin(tyaw - w.yaw), Math.cos(tyaw - w.yaw)); w.yaw += dy * (1 - Math.exp(-7 * dt));
     const prevPh = w.ph;
@@ -538,7 +551,9 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
     // pool floor-sit: low on the deck floor (not chair-height on a rim), legs over the edge into the water
     const poolSit = onPool && g.pose === 'sit' && !standing;
     // butt mesh sits at pelvis.y + ~0.74, so negative pelvis.y puts them on the floor
+    w.kn = D(w.kn, kneelHim ? 1 : 0, 3.5, dt);   // 0 standing .. 1 down on one knee
     N.pelvis.position.y = (poolSit ? -0.55 : 0.5 * ss) + (walking ? Math.abs(Math.sin(w.ph)) * 0.02 : 0);
+    if (w.kn > 0.002) N.pelvis.position.y = L(N.pelvis.position.y, -0.1, w.kn);
     for (const k of [0, 1]) { const ph = k ? Math.PI : 0;
       const pop = long && standP && !walking && k === 0 ? 1 : 0;   // her weight on one leg, the other knee relaxed forward
       if (poolSit) {
@@ -552,6 +567,11 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
         hip[k].current.rotation.x = L(sitHip, 0, ss) - le * 0.25 - (walking ? Math.sin(w.ph + ph) * 0.28 : 0) - pop * 0.32;
         knee[k].current.rotation.x = L(sitKnee, 0, ss) + le * 0.4 + (walking ? Math.max(0, -Math.sin(w.ph + ph + 0.9)) * 0.42 : 0) + pop * 0.5;
       }
+    }
+    if (w.kn > 0.002) {   // one knee on the floor: front thigh forward, back shin lying behind
+      const kk = w.kn;
+      hip[0].current.rotation.x = L(hip[0].current.rotation.x, -1.57, kk); knee[0].current.rotation.x = L(knee[0].current.rotation.x, 2.15, kk);
+      hip[1].current.rotation.x = L(hip[1].current.rotation.x, 0, kk); knee[1].current.rotation.x = L(knee[1].current.rotation.x, 1.57, kk);
     }
     if (long && standP) N.pelvis.position.x = D(N.pelvis.position.x, walking ? 0 : 0.04, 4, dt); else N.pelvis.position.x = D(N.pelvis.position.x, 0, 6, dt);
     const br = T + i * 0.7, idle = Math.sin(br * 1.6) * 0.012, sw = walking ? Math.sin(w.ph) * 0.5 : 0, torso = N.torso, head = N.head;
@@ -569,7 +589,15 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
     const o2 = PT[1 - i]!, mine = PT[i]!, act = c.act, live = !!act && t >= 0 && t < ACTS[act].dur;
     const sN = N.armN.getWorldPosition(v1).clone(), bkA = o2.bk[0].getWorldPosition(v2).clone(), bkB = o2.bk[1].getWorldPosition(v3).clone();
     const near = sN.distanceTo(bkA) < sN.distanceTo(bkB), back = (isN: boolean) => (isN === near ? bkA : bkB);
+    const holdMode = (live && act === 'hold') || (!live && g.world === 'proposal' && g.pose === 'stand');
+    const holdMid = mine.torso.getWorldPosition(new THREE.Vector3()).add(o2.torso.getWorldPosition(new THREE.Vector3())).multiplyScalar(0.5).add(new THREE.Vector3(0, 0.15, 0.12));
+    const useN = sN.distanceTo(holdMid) <= N.armF.getWorldPosition(new THREE.Vector3()).distanceTo(holdMid);
     const target = (isN: boolean): THREE.Vector3 | null => { const g = (n: THREE.Object3D) => n.getWorldPosition(new THREE.Vector3());
+      if (!live && get().world === 'proposal') {   // kneeling: he holds the ring box out in front of him, she lifts a hand to her lips
+        if (get().pose !== 'kneel') return isN === useN ? holdMid : null;   // standing together: their hands meet halfway
+        if (i === 0) return isN ? torso.localToWorld(new THREE.Vector3(d * 0.14, 0.34, 0.4)) : null;
+        return isN ? g(mine.lip).add(new THREE.Vector3(0, -0.02, 0.06)) : null;
+      }
       if (standP && !live) return isN ? (long ? g(N.hairPt) : null) : g(N.hipF);   // standing pretty: hand on hip, other hand to her hair
       if (!live) return null;
       if (act === 'hug') return back(isN);
@@ -577,16 +605,21 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
       if (act === 'tease') return isN && i === 1 ? g(o2.nose) : null;
       if (act === 'slap') return isN ? (i === 1 ? g(o2.sh) : g(mine.sh)) : null;
       if (act === 'feed') return isN && i === 0 ? g(o2.lip) : null;   // his hand brings the bite to her lips
-      if (act === 'hold') return isN ? g(mine.sh).add(g(o2.sh)).multiplyScalar(0.5).add(new THREE.Vector3(0, -0.42, 0.12)) : null;   // both near hands meet halfway
+      if (act === 'hold') return isN === useN ? holdMid : null;   // both hands meet halfway
       if (act === 'flower') return isN && i === 0 ? g(o2.jaw).add(new THREE.Vector3(0, 0.22, -0.05)) : null; // his hand to her hair
       return null; };
-    for (const isN of [true, false]) { const k = isN ? 'n' : 'f', sh = N[isN ? 'armN' : 'armF'], el = N[isN ? 'elN' : 'elF'], wt = clamp(p[k + 'ik'], 0, 1), tp = wt > 0.01 ? target(isN) : null;
+    for (const isN of [true, false]) { const k = isN ? 'n' : 'f', sh = N[isN ? 'armN' : 'armF'], el = N[isN ? 'elN' : 'elF'], wt = holdMode ? (isN === useN ? clamp(Math.max(p.nik, p.fik), 0, 1) : 0) : clamp(p[k + 'ik'], 0, 1), tp = wt > 0.01 ? target(isN) : null, ck = holdMode && isN === useN ? 'n' : k;
       fk.setFromEuler(eu.set(p[k + 'S'] + sw * (isN ? 1 : -1), 0, p[k + 'Z'])); let e = p[k + 'E'];
       if (tp) { reach(sh, torso, tp, isN ? d : -d, ik); sh.quaternion.copy(fk).slerp(ik.q, wt); e = L(e, ik.e, wt); } else sh.quaternion.copy(fk);
-      el.rotation.set(e, 0, 0); N[k + 'Fin'].rotation.x = -p[k + 'fc'] * 1.1; N[k + 'Idx'].rotation.x = -p[k + 'ic'] * 1.1;
-      for (let j = 0; j < 3; j++) { const f2 = N[k + 'F2_' + j]; if (f2) f2.rotation.x = -p[k + 'fc'] * 1.2; } if (N[k + 'Idx2']) N[k + 'Idx2'].rotation.x = -p[k + 'ic'] * 1.2; }
+      el.rotation.set(e, 0, 0); N[k + 'Fin'].rotation.x = -p[ck + 'fc'] * 1.1; N[k + 'Idx'].rotation.x = -p[ck + 'ic'] * 1.1;
+      for (let j = 0; j < 3; j++) { const f2 = N[k + 'F2_' + j]; if (f2) f2.rotation.x = -p[ck + 'fc'] * 1.2; } if (N[k + 'Idx2']) N[k + 'Idx2'].rotation.x = -p[ck + 'ic'] * 1.2; }
     if (N.nFood) N.nFood.visible = live && act === 'feed' && i === 0 && t > 0.2 && t < 2.3;   // the strawberry vanishes at the bite
     if (N.fFood) N.fFood.visible = false;
+    if (N.box) {   // the ring box in his hand (proposal): lid opens when she taps it on screen
+      N.box.visible = i === 0 && g.world === 'proposal' && g.pose === 'kneel';
+      if (N.boxLid) N.boxLid.rotation.x = L(N.boxLid.rotation.x, g.ringOpen ? -1.9 : 0, Math.min(1, 6 * dt));
+      if (N.boxRing) { N.boxRing.visible = g.ringOpen; N.boxRing.rotation.y += dt * 1.6; }
+    }
     N.head.getWorldPosition(HEADW[i]);
     // no auto-splash while floating — only when she chooses to splash
     // ---- face: repaint the drawn face only when the expression actually changed ----
@@ -597,18 +630,49 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
     faceMat.color.setScalar(1 - 0.38 * tk.v);
     const pk = clamp((p.mp - 0.1) * 3, 0, 1), lb = N.lipBump; lb.scale.set(0.03 * (1 - 0.3 * p.mp) * pk + 0.0001, 0.012 * pk + 0.0001, (0.012 + 0.012 * p.mp) * pk + 0.0001); lb.position.z = 0.165 + 0.006 * p.mp;
   });
+  const gold = <meshStandardMaterial color="#e8c15a" metalness={0.3} roughness={0.35} emissive="#a07a20" emissiveIntensity={0.35} />;
+  const skirtG = useMemo(() => new THREE.LatheGeometry([[0.14, 0.88], [0.17, 0.8], [0.24, 0.62], [0.34, 0.36], [0.46, 0.06], [0.56, -0.24], [0.64, -0.46], [0.66, -0.52]].map(([r, y]) => new THREE.Vector2(r, y)), 40), []);
+  const fz = REAL.on ? (long ? 0.145 : 0.187) : (long ? 0.15 : 0.16);
+  // wedding details on the chest: his white shirt, lapels, bow tie, buttons, pocket square — her pearl necklace and waist sash
+  const weddingChest = wed ? (long ? <>
+    <mesh position={[0, 0.555, 0.035]} rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[0.1, 0.008, 8, 28]} /><meshStandardMaterial color="#f7f2ea" roughness={0.25} /></mesh>
+    <mesh position={[0, 0.2, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[1.15, 0.78, 1]}><torusGeometry args={[REAL.on ? 0.142 : 0.16, 0.012, 8, 32]} /><meshStandardMaterial color="#e8d8c0" roughness={0.4} /></mesh>
+  </> : <>
+    <TE p={[0, 0.47, fz]} s={[0.055, 0.12, 0.012]} c="#f6f6f4" />
+    {[-1, 1].map(sx => <TE key={sx} p={[sx * 0.075, 0.45, fz - 0.002]} s={[0.03, 0.13, 0.014]} c="#2a2a32" rot={[0, 0, -sx * 0.22]} />)}
+    {[-1, 1].map(sx => <TE key={`b${sx}`} p={[sx * 0.024, 0.555, fz + 0.006]} s={[0.026, 0.016, 0.012]} c="#08080a" rot={[0, 0, sx * 0.25]} />)}
+    <TE p={[0, 0.555, fz + 0.008]} s={[0.011, 0.011, 0.011]} c="#08080a" />
+    {[0.3, 0.2].map(by => <TE key={by} p={[0, by, fz]} s={[0.012, 0.012, 0.01]} c="#0b0b0e" />)}
+    <TE p={[d * 0.11, 0.38, fz - 0.004]} s={[0.022, 0.012, 0.01]} c="#ffffff" />
+  </>) : null;
+  const ringBoxProp = (
+    <group ref={o('box')} position={[d * 0.14, 0.34, 0.4]} visible={false}>
+      <mesh><boxGeometry args={[0.09, 0.05, 0.07]} /><meshStandardMaterial color="#7a1f2e" roughness={0.8} /></mesh>
+      <mesh position={[0, 0.027, 0]}><boxGeometry args={[0.07, 0.012, 0.05]} /><meshStandardMaterial color="#f4e8ec" roughness={0.9} /></mesh>
+      <group ref={o('boxLid')} position={[0, 0.025, -0.035]}><mesh position={[0, 0.009, 0.035]}><boxGeometry args={[0.09, 0.018, 0.07]} /><meshStandardMaterial color="#7a1f2e" roughness={0.8} /></mesh></group>
+      <group ref={o('boxRing')} position={[0, 0.05, 0]} visible={false}>
+        <mesh><torusGeometry args={[0.014, 0.0038, 8, 20]} />{gold}</mesh>
+        <mesh position={[0, 0.0175, 0]}><octahedronGeometry args={[0.0075, 0]} /><meshStandardMaterial color="#eaf8ff" emissive="#bfe6ff" emissiveIntensity={1.2} roughness={0.1} /></mesh>
+      </group>
+    </group>);
+  const Crown = () => (
+    <group position={[0, 0.48, -0.005]} rotation={[-0.45, 0, 0]}>
+      <mesh rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[0.206, 0.011, 8, 36, Math.PI]} />{gold}</mesh>
+      {[0.17, 0.34, 0.5, 0.66, 0.83].map((u, k) => { const a = Math.PI * u, hh = [0.04, 0.06, 0.09, 0.06, 0.04][k], cx = Math.cos(a) * 0.206, cz = Math.sin(a) * 0.206;
+        return <group key={k}><mesh position={[cx, hh / 2, cz]}><coneGeometry args={[0.014, hh, 6]} />{gold}</mesh><mesh position={[cx, hh + 0.006, cz]}><sphereGeometry args={[0.011, 8, 6]} /><meshStandardMaterial color="#fff4fb" emissive="#ffc8e4" emissiveIntensity={0.9} /></mesh></group>; })}
+    </group>);
   const limb = (s: 'n' | 'f') => {
     const ts = s === 'n' ? -d : d;
     // when undressed, whole arm is continuous skin (no top/skin color break)
-    const armC = naked ? skin : top;
+    const armC = naked || (wed && long) ? skin : top;   // bride: bare arms
     return (
-    <group position={[(s === 'n' ? d : -d) * 0.27, 0.52, 0]} ref={o(s === 'n' ? 'armN' : 'armF')}>
+    <group position={[(s === 'n' ? d : -d) * (long ? 0.27 : 0.315), 0.52, 0]} ref={o(s === 'n' ? 'armN' : 'armF')}>
       {/* shoulder ball — skin when undressed, matches sleeve when clothed */}
-      <TE p={[0, 0.02, 0]} s={[0.07, 0.068, 0.068]} c={armC} o={0} />
-      <TC p={[0, -0.13, 0]} r={0.06} l={0.2} c={armC} o={0.006} />
+      <TE p={[0, 0.02, 0]} s={long ? [0.07, 0.068, 0.068] : [0.088, 0.084, 0.084]} c={armC} o={0} />
+      <TC p={[0, -0.13, 0]} r={long ? 0.06 : 0.076} l={0.2} c={armC} o={0.006} />
       <group position={[0, -0.26, 0]} ref={o(s === 'n' ? 'elN' : 'elF')}>
         <TE p={[0, 0.02, 0]} s={[0.052, 0.052, 0.052]} c={skin} o={0} />
-        <TC p={[0, -0.11, 0]} r={0.048} l={0.16} c={skin} o={0.005} />
+        <TC p={[0, -0.11, 0]} r={long ? 0.048 : 0.058} l={0.16} c={skin} o={0.005} />
         <group position={[0, -0.24, 0]}>
           {/* wrist ball */}
           <TE p={[0, 0.02, 0]} s={[0.038, 0.038, 0.038]} c={skin} o={0.002} />
@@ -633,42 +697,53 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
           <group ref={o(s + 'Food')} visible={false} position={[ts * 0.002, -0.135, 0.034]}>
             <TE p={[0, 0, 0]} s={[0.03, 0.036, 0.03]} c="#e8334a" /><TE p={[0, 0.034, 0]} s={[0.019, 0.008, 0.019]} c="#4aa84a" />
           </group>
+          {/* her bridal bouquet (held in the far hand) */}
+          {wed && long && s === 'f' && <group position={[0, -0.13, 0.05]}>
+            <TC p={[0, 0.05, 0]} r={0.006} l={0.1} c="#4f9a45" />
+            {([[0, 0, 0, '#ffffff'], [0.035, 0.01, 0.01, '#ffd6e4'], [-0.035, 0.012, 0, '#ff9fbb'], [0.012, -0.03, 0.025, '#ffffff'], [-0.015, 0.03, 0.03, '#f6e6a8'], [0.02, 0.035, -0.02, '#ffb8cf']] as [number, number, number, string][]).map(([bx, by, bz, bc], k) => <TE key={k} p={[bx, by, bz]} s={[0.032, 0.032, 0.032]} c={bc} />)}
+            <TE p={[0, -0.01, 0]} s={[0.07, 0.014, 0.07]} c="#4f9a45" />
+          </group>}
         </group>
       </group>
     </group>
   ); };
   return (
-    <group ref={o('root')} position={i === 1 ? [x + 7, 0, -0.2] : [x, 0, -0.95]}>
+    <group ref={o('root')} scale={i === 0 ? 1.07 : 0.96} position={i === 1 ? [x + 7, 0, -0.2] : [x, 0, -0.95]}>
       <group ref={o('pelvis')}>
+        {wed && long && <>
+          <mesh geometry={skirtG} castShadow><meshStandardMaterial color={top} roughness={0.5} emissive={top} emissiveIntensity={0.06} side={THREE.DoubleSide} /></mesh>
+          <mesh geometry={skirtG} scale={[1.05, 1, 1.05]} position={[0, -0.02, 0]}><meshStandardMaterial color="#ffffff" roughness={0.6} transparent opacity={0.5} side={THREE.DoubleSide} depthWrite={false} /></mesh>
+        </>}
         <TE p={[0, swim || naked ? 0.74 : 0.76, 0.02]} s={swim || naked ? (long ? [0.22, 0.12, 0.18] : [0.26, 0.14, 0.2]) : [0.25, 0.16, 0.19]} c={naked ? skin : pants} o={swim || naked ? 0.004 : 0} />
         {[0, 1].map(k => <group key={k} ref={hip[k]} position={[k ? 0.1 : -0.1, 0.73, 0.02]}>
           {/* hip joint — skin when undressed / swim / beach legs, else matches pants */}
           <TE p={[0, 0.02, 0]} s={[0.088, 0.082, 0.082]} c={naked || beach || swim ? skin : pants} o={0} />
           {naked ? (
             /* undressed: continuous skin leg, overlapped capsules */
-            <><TC p={[0, -0.18, 0]} r={long ? 0.09 : 0.082} l={0.28} c={skin} o={0.005} />
+            <><TC p={[0, -0.18, 0]} r={long ? 0.09 : 0.098} l={0.28} c={skin} o={0.005} />
               <TE p={[0, -0.42, 0]} s={[0.07, 0.07, 0.07]} c={skin} o={0.003} />
               <TC p={[0, -0.5, 0]} r={0.068} l={0.18} c={skin} o={0.005} />
               <TE p={[0, -0.62, 0]} s={[0.065, 0.065, 0.065]} c={skin} /></>
           ) : beach || swim ? (
-            <><TC p={[0, -0.15, 0]} r={long ? 0.092 : 0.084} l={0.22} c={swim && long ? skin : pants} o={0.006} />
+            <><TC p={[0, -0.15, 0]} r={long ? 0.092 : 0.098} l={0.22} c={swim && long ? skin : pants} o={0.006} />
               <TE p={[0, -0.32, 0]} s={[0.07, 0.07, 0.07]} c={skin} o={0.003} />
               <TC p={[0, -0.45, 0]} r={0.066} l={0.2} c={skin} o={0.005} />
               <TE p={[0, -0.58, 0]} s={[0.064, 0.064, 0.064]} c={skin} /></>
           ) : (
-            <><TC p={[0, -0.28, 0]} r={0.078} l={0.42} c={pants} o={0.006} />
+            <><TC p={[0, -0.28, 0]} r={long ? 0.078 : 0.092} l={0.42} c={pants} o={0.006} />
               <TE p={[0, -0.57, 0]} s={[0.07, 0.07, 0.07]} c={pants} /></>
           )}
           <group ref={knee[k]} position={[0, -0.57, 0]}>
             {/* knee ball — skin when bare legs */}
             <TE p={[0, 0.02, 0]} s={[0.06, 0.06, 0.06]} c={naked || beach || swim ? skin : pants} o={0} />
-            <TC p={[0, -0.32, 0]} r={0.058} l={0.52} c={naked || beach || swim ? skin : pants} o={0.006} />
-            <TE p={[0, -0.69, 0.07]} s={[0.075, 0.055, 0.14]} c={naked || swim ? skin : beach ? '#d9b27a' : '#fbf8f4'} o={0.006} />{!swim && !naked && (() => {
+            <TC p={[0, -0.32, 0]} r={long ? 0.058 : 0.068} l={0.52} c={naked || beach || swim ? skin : pants} o={0.006} />
+            <TE p={[0, -0.69, 0.07]} s={[0.075, 0.055, 0.14]} c={naked || swim ? skin : wed ? (long ? '#f7f1e8' : '#121216') : beach ? '#d9b27a' : '#fbf8f4'} o={0.006} />{!swim && !naked && (() => {
             // slippers / sandals / shoes by world
             const isBeach = world === 'beach' || outfit === 'beach';
             const isGarden = world === 'garden';
             const isKitchen = world === 'kitchen';
             const isShower = world === 'shower';
+            if (wed) return <TE p={[0, -0.72, 0.07]} s={[0.078, 0.025, 0.142]} c={long ? '#f1e8da' : '#0b0b0e'} />;   // polished shoes / white heels
             if (isShower) return null; // barefoot in shower
             if (isBeach) {
               // open sandals
@@ -688,18 +763,19 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
             return <TE p={[0, -0.72, 0.07]} s={[0.078, 0.025, 0.142]} c={long ? '#e8808a' : '#4a6a8a'} />;
           })()}</group></group>)}
         <group ref={o('torso')} position={[0, 0.7, 0]}>
-          <mesh geometry={torsoG} scale={[1.15, 1, 0.78]} castShadow>{toon(top)}<OL thickness={0.007} color={INK} /></mesh>
-          {floral && <mesh geometry={torsoG} scale={[1.16, 1.005, 0.79]}><meshLambertMaterial map={floral} transparent depthWrite={false} polygonOffset polygonOffsetFactor={-2} /></mesh>}
+          <mesh geometry={torsoG} scale={long ? [1.15, 1, 0.78] : [1.26, 1, 0.84]} castShadow>{toon(top)}<OL thickness={0.007} color={INK} /></mesh>
+          {floral && <mesh geometry={torsoG} scale={long ? [1.16, 1.005, 0.79] : [1.27, 1.005, 0.85]}><meshLambertMaterial map={floral} transparent depthWrite={false} polygonOffset polygonOffsetFactor={-2} /></mesh>}
           <TC p={[0, 0.63, 0]} r={0.048} l={0.08} c={skin} />
           <TE p={[0, 0.58, 0]} s={[0.08, 0.06, 0.07]} c={skin} o={0.002} />
           {!swim && <mesh position={[0, 0.575, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[1, 0.85, 1]}><torusGeometry args={[0.082, 0.016, 8, 24]} />{toon(trim)}</mesh>}
           {swim && long && !naked && <>{[-1, 1].map(sx => <TE key={sx} p={[sx * 0.075, 0.43, 0.13]} s={[0.072, 0.062, 0.04]} c={pants} o={0.004} rot={[-0.2, sx * 0.3, sx * 0.25]} />)}<TE p={[0, 0.425, 0.158]} s={[0.018, 0.02, 0.015]} c={tl(pants, 0.8)} />
             <mesh position={[0, 0.57, 0.02]} rotation={[Math.PI / 2, 0, 0]} scale={[1, 0.85, 1]}><torusGeometry args={[0.085, 0.005, 6, 24]} />{toon(pants)}</mesh></>}
           {swim && !long && !naked && <>{[-1, 1].map(sx => <TE key={sx} p={[sx * 0.075, 0.405, 0.15]} s={[0.075, 0.045, 0.02]} c={tl(skin, 0.88)} rot={[0, 0, sx * 0.1]} />)}<TE p={[0, 0.25, 0.16]} s={[0.012, 0.1, 0.01]} c={tl(skin, 0.86)} />{[0.31, 0.2, 0.09].map(ay => <TE key={ay} p={[0, ay, 0.158]} s={[0.07, 0.008, 0.01]} c={tl(skin, 0.88)} />)}</>}
-          {swim ? null : long ? <><TE p={[-0.035, 0.5, 0.15]} s={[0.04, 0.03, 0.015]} c="#ff6f8f" rot={[0, 0, 0.5]} o={0.003} /><TE p={[0.035, 0.5, 0.15]} s={[0.04, 0.03, 0.015]} c="#ff6f8f" rot={[0, 0, -0.5]} o={0.003} /><TE p={[0, 0.5, 0.155]} s={[0.02, 0.02, 0.015]} c="#e04a6e" /></>
+          {swim ? null : wed ? weddingChest : long ? <><TE p={[-0.035, 0.5, 0.15]} s={[0.04, 0.03, 0.015]} c="#ff6f8f" rot={[0, 0, 0.5]} o={0.003} /><TE p={[0.035, 0.5, 0.15]} s={[0.04, 0.03, 0.015]} c="#ff6f8f" rot={[0, 0, -0.5]} o={0.003} /><TE p={[0, 0.5, 0.155]} s={[0.02, 0.02, 0.015]} c="#e04a6e" /></>
             : <TE p={[0, 0.5, 0.15]} s={[0.025, 0.07, 0.012]} c={trim} />}
-          <group ref={o('sh')} position={[d * 0.28, 0.56, 0]} /><group ref={o('hipF')} position={[-d * 0.2, 0.1, 0.07]} /><group ref={o('bk0')} position={[-0.2, 0.3, -0.13]} /><group ref={o('bk1')} position={[0.2, 0.3, -0.13]} />
+          <group ref={o('sh')} position={[d * (long ? 0.28 : 0.32), 0.56, 0]} /><group ref={o('hipF')} position={[-d * 0.2, 0.1, 0.07]} /><group ref={o('bk0')} position={[-0.2, 0.3, -0.13]} /><group ref={o('bk1')} position={[0.2, 0.3, -0.13]} />
           {limb('n')}{limb('f')}
+          {wed && !long && ringBoxProp}
           <group ref={o('head')} position={[0, 0.62, 0]}>
             <mesh geometry={headG} position={[0, 0.28, 0]} scale={HS} castShadow>{toon(skin, 0.14)}<OL thickness={0.007 / 0.26} color={INK} /></mesh>
             <mesh geometry={patchG} position={[0, 0.28, 0]} scale={[HS[0] * 1.004, HS[1] * 1.004, HS[2] * 1.004]} material={faceMat} />
@@ -732,6 +808,7 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
             {long && <><Lock p={[-0.24, 0.16, 0.06]} rot={[0.15, 0, 0.04]} len={0.48} w={0.045} c={hc} /><Lock p={[0.24, 0.16, 0.06]} rot={[0.15, 0, -0.04]} len={0.48} w={0.045} c={hc} /></>}
             {clip && <><TE p={[0.19, 0.5, 0.1]} s={[0.04, 0.022, 0.016]} c="#ff7fa0" rot={[0, 0, 0.5]} o={0.003} /><TE p={[0.23, 0.47, 0.1]} s={[0.04, 0.022, 0.016]} c="#ff7fa0" rot={[0, 0, -0.5]} o={0.003} /></>}
             {long && <HairGajra />}
+            {wed && long && <Crown />}
           </group></group>
       </group>
     </group>);

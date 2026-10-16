@@ -28,6 +28,7 @@ export type Sfx =
   /* dialogue-game voicelets */
   | 'hmm' | 'uhh' | 'hm' | 'hehe' | 'heh' | 'aww' | 'oh' | 'mm' | 'shy' | 'softlaugh' | 'boylaugh' | 'girllaugh' | 'agree' | 'breath' | 'female_mm'
   | 'foh' | 'fuhh'  // female oh / uhh — separate from male so they never collide
+  | 'cheer' | 'aww_crowd' | 'firework'   // secret proposal (played by the engine)
   | 'heavy' | 'heavy_stop';  // her heavy breathing start / stop
 
 let noise: AudioBuffer | null = null;

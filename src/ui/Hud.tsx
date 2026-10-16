@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { get, set, useGame, inFullscreen } from '../state/store';
-import { play, pick, rail, tap, toggleLamp, goWorld, syncRealTime } from '../story/engine';
+import { play, pick, rail, tap, toggleLamp, goWorld, syncRealTime, ringTap, startProposal } from '../story/engine';
 import type { Act } from '../story/script';
 import { unlockAudio, blip, sfx } from '../audio/audio';
 import { setMusicMuted, chooseSong, isMusicMuted, playSoftMusic, getSongsFor, getSongName, stopMusic } from '../audio/music';
@@ -173,6 +173,54 @@ function Her() {
     pick(o);
   }}>{o.label.replace(/[\u201c\u201d"]/g, '').trim()}</button>)}</div>;
 }
+/** the ring box on screen (secret proposal): she taps it, the lid opens and the ring floats out */
+function RingBox() {
+  const rb = useGame(g => g.ringBox);
+  const sparks = useRef(Array.from({ length: 16 }, () => ({ x: 8 + Math.random() * 84, y: 4 + Math.random() * 70, d: Math.random() * 2.4, s: 6 + Math.random() * 10 })));
+  if (!rb) return null;
+  const open = rb === 'open';
+  return (
+    <div className={`ringov${open ? ' open' : ''}`} onClick={() => ringTap()} role="button" aria-label="Open the ring box">
+      <div className="rbox">
+        <div className="rb-base"><div className="rb-slot" /></div>
+        <div className="rb-ring">
+          <svg viewBox="0 0 120 150" aria-hidden="true">
+            <defs><linearGradient id="rbgold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#fff0b0" /><stop offset=".5" stopColor="#e0a93a" /><stop offset="1" stopColor="#9a6a18" /></linearGradient></defs>
+            <ellipse cx="60" cy="100" rx="32" ry="38" fill="none" stroke="url(#rbgold)" strokeWidth="10" />
+            <path d="M44 62 L76 62 L68 76 L52 76 Z" fill="url(#rbgold)" />
+            <polygon points="60,16 84,38 71,64 49,64 36,38" fill="#e8f7ff" stroke="#ffffff" strokeWidth="2" />
+            <path d="M36 38 H84 M60 16 L49 64 M60 16 L71 64 M49 38 L60 64 M71 38 L60 64" fill="none" stroke="#9fd4f0" strokeWidth="1.5" />
+          </svg>
+        </div>
+        <div className="rb-lid" />
+        {open && sparks.current.map((p, k) => <i key={k} className="rb-spk" style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.s, height: p.s, animationDelay: `${0.5 + p.d}s` }} />)}
+      </div>
+      {open ? <p className="rb-say">Will you marry me?</p> : <p className="rb-hint">Tap the box</p>}
+    </div>
+  );
+}
+/** flower confetti falling over the whole screen (celebration) */
+function FlowerConfetti() {
+  const c = useGame(g => g.confetti);
+  const seen = useRef(c);
+  useEffect(() => {
+    if (c === seen.current) return; seen.current = c;
+    const glyphs = ['❀', '✿', '❁', '✾', '❃'], cols = ['#ff9fbb', '#ffffff', '#ffd6e4', '#ffe08a', '#f6c8ff', '#ff7fa0'];
+    let n = 0;
+    const iv = window.setInterval(() => {
+      for (let k = 0; k < 3; k++) {
+        const el = document.createElement('span'); el.className = 'fpetal'; el.textContent = glyphs[Math.floor(Math.random() * glyphs.length)];
+        el.style.left = `${Math.random() * 100}vw`; el.style.fontSize = `${14 + Math.random() * 26}px`; el.style.color = cols[Math.floor(Math.random() * cols.length)];
+        el.style.setProperty('--dx', `${(Math.random() - 0.5) * 160}px`); el.style.setProperty('--rot', `${(Math.random() - 0.5) * 900}deg`); el.style.animationDuration = `${3.6 + Math.random() * 3.4}s`;
+        document.body.appendChild(el); el.addEventListener('animationend', () => el.remove());
+      }
+      if (++n > 40) clearInterval(iv);
+    }, 130);
+    return () => clearInterval(iv);
+  }, [c]);
+  return null;
+}
+
 const ACTS: [Act, string][] = [['hug', 'Hug'], ['kiss', 'Kiss'], ['tease', 'Tease'], ['slap', 'Slap'], ['hold', 'Hold hands'], ['feed', 'Feed']];
 const FEED_WORLDS = ['kitchen', 'garden', 'beach'];
 const ICONS: Record<Act, string> = {
@@ -577,9 +625,14 @@ export function Hud() {
   const actsLocked = busy || !gfSeated || (pose !== 'sit' && pose !== 'bed') || scene;
   const lampLocked = scene; // only during blackout / transition
   const showUi = started && intro === 'done' && !title;
+  const secret = world === 'proposal';
+  useEffect(() => { document.body.classList.toggle('secret', secret); return () => document.body.classList.remove('secret'); }, [secret]);
+  // preview link for testing only (not shown anywhere): open the game with ?proposal added to the address
+  useEffect(() => { if (showUi && /[?&]proposal\b/.test(window.location.search)) startProposal(); }, [showUi]);
 
   return (<>
     <ExitGuard />
+    <RingBox /><FlowerConfetti />
     {intro !== 'done' && <Intro />}
     <div className="fade" style={{ opacity: fade }} onClick={() => { if (fade > 0.5) set({ fade: 0 }); }} />
     {caption && <div className="caption" key={caption}><p>{caption}</p></div>}

@@ -5,6 +5,7 @@ import { playSoftMusic, onWorldChange, onSongUserPicked, getSongName } from '../
 import { setAmbientWorld, startAmbientIfNeeded, setShowerWater, setIntimateAudio, stopAllAmbient } from '../audio/ambient';
 import { pauseMusic, resumeMusic } from '../audio/music';
 import { BODY, FX } from '../worlds/anchors';
+import { startProposalMusic, startCrowd, crowdCheer, crowdAww, fireworkSfx, endProposalAudio } from '../audio/proposalAudio';
 export { startAmbientIfNeeded };
 const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
 let runAct: (a: Act) => Promise<void> = async () => {};
@@ -23,6 +24,15 @@ const waitTap = async (ms = 0) => {
   while (get().paused) await sleep(150);
 };
 let token = 0;
+let ringRes: (() => void) | null = null;
+/** she taps the ring box on screen */
+export function ringTap() {
+  if (get().ringBox !== 'closed') return;
+  set({ ringBox: 'open', ringOpen: true, confetti: Date.now() });
+  try { sfx('chime'); } catch { /* */ }
+  ringRes?.();
+}
+
 const READY = ['bedroom', 'kitchen', 'garden', 'beach', 'pool', 'shower'];
 
 /** Map local clock hour → time-of-day for sky + dialogue */
@@ -33,6 +43,7 @@ export function hourToTod(h: number): 'morning' | 'afternoon' | 'evening' | 'nig
   return 'night';
 }
 export function syncRealTime() {
+  if (get().world === 'proposal') return 'night';   // the secret world is always night
   const tod = hourToTod(new Date().getHours());
   if (get().tod !== tod) set({ tod });
   return tod;
@@ -90,7 +101,21 @@ export async function play(id: string): Promise<void> {
       if (s.act === 'flower') set({ flowerInHair: true });
       set({ busy: false });
     }
-    else if ('sfx' in s) { if (s.sfx === 'song') playSoftMusic(); else sfx(s.sfx); }
+    else if ('ring' in s) {
+      set({ line: '', options: [], ringBox: 'closed' });
+      await new Promise<void>(r => { ringRes = r; });
+      ringRes = null;
+      await sleep(5200);   // the ring floats out, flowers fall…
+      set({ ringBox: '' });
+      if (my !== token) return;
+    }
+    else if ('sfx' in s) {
+      if (s.sfx === 'song') playSoftMusic();
+      else if (s.sfx === 'cheer') { crowdCheer(); set({ cheer: Date.now(), confetti: Date.now() }); }
+      else if (s.sfx === 'aww_crowd') { crowdAww(); set({ cheer: Date.now() }); }
+      else if (s.sfx === 'firework') fireworkSfx();
+      else sfx(s.sfx);
+    }
     else if ('tod' in s) set({ tod: s.tod });
     else if ('gf' in s) { set({ gfHere: true }); const t0 = Date.now(); while (!get().gfSeated && Date.now() - t0 < 9000) await sleep(100); await sleep(400); }
     else if ('wait' in s) await sleep(s.wait);
@@ -100,7 +125,7 @@ export async function play(id: string): Promise<void> {
       // beach / pool / shower walks are longer (around obstacles, into water)
       const longWalk = ['wade', 'swim', 'rest'].includes(s.pose)
         || (s.pose === 'sit' && (w === 'beach' || w === 'pool'))
-        || (s.pose === 'stand' && (w === 'beach' || w === 'shower' || w === 'pool'));
+        || (s.pose === 'stand' && (w === 'beach' || w === 'shower' || w === 'pool' || w === 'proposal'));
       set({ line: '', pose: s.pose });
       await sleep(s.pose === 'bed' ? 2800 : longWalk ? 4200 : 2400);
     }
@@ -213,7 +238,12 @@ const WORLD_REPLAY: Record<string, string> = {
   pool: 'pl_replay',
   shower: 'sh_replay',
 };
+function leaveProposal() {
+  endProposalAudio(); set({ fireworks: false, ringBox: '', ringOpen: false });
+  resumeMusic();
+}
 export async function goWorld(id: string, _opts?: { silent?: boolean }) {
+  if (get().world === 'proposal' && id !== 'proposal') leaveProposal();
     // same world (not bedroom) → again + replay instead of re-arriving
   if (get().world === id && id !== 'bedroom' && WORLD_REPLAY[id] && get().gfHere) {
     token++; release?.();
@@ -268,6 +298,24 @@ export async function goWorld(id: string, _opts?: { silent?: boolean }) {
     clearTimeout(fadeSafety);
     set({ fade: 0 });
   }
+}
+// ---- the secret proposal world: never listed anywhere. Opens after the hidden sequence  hold hands → hug → kiss → hold hands  (each within 2 min). ----
+const SECRET_SEQ: Act[] = ['hold', 'hug', 'kiss', 'hold'];
+let seq: Act[] = [], seqAt = 0;
+export async function startProposal() {
+  if (get().world === 'proposal') return;
+  token++; release?.(); sideOn = false; sideRel = null;
+  set({ options: [], line: '', busy: true, fade: 1 });
+  await sleep(900);
+  pauseMusic(); stopAllAmbient(); setSfxMuted(false);
+  set({ world: 'proposal', tod: 'night', outfit: 'wedding', pose: 'stand', naked: false, steam: false, showerOn: false, disco: false, rain: false, tint: '', lamp: true,
+    gfHere: true, gfSeated: true, ringBox: '', ringOpen: false, fireworks: false, scene: false, caption: '', clothSeed: Math.floor(Math.random() * 1e9) });
+  setShowerWater(false);
+  startProposalMusic(); startCrowd();
+  await sleep(900);
+  set({ fade: 0, busy: false });
+  await sleep(800);
+  play('prop_1');
 }
 // ---- side exchanges: he reacts, she answers, he replies, then the story resumes exactly where it was ----
 let sideOn = false, keep: { options: Opt[]; line: string; kind: 'say' | 'thought' } = { options: [], line: '', kind: 'say' };
@@ -339,6 +387,9 @@ export async function rail(a: Act) {
   const g = get(); if (g.busy || sideOn || g.scene || g.pose !== 'sit' || !g.gfSeated || (g.kind === 'thought' && g.line)) return;
   keep = { options: g.options, line: g.line, kind: g.kind }; sideOn = true; set({ busy: true, options: [], line: '' });
   await runAct(a);  // sfx from ACTS.ev at contact time
+  const now = Date.now(); if (now - seqAt > 120000) seq = [];
+  seqAt = now; seq = [...seq, a].slice(-SECRET_SEQ.length);
+  if (seq.length === SECRET_SEQ.length && seq.every((v, k) => v === SECRET_SEQ[k]) && get().world !== 'proposal') { seq = []; sideOn = false; sideRel = null; set({ busy: false }); startProposal(); return; }
   const c = ++counts[a], ex = exchanges[a], id = c >= 4 && c % 2 === 0 ? ex.many : ex.pool[(c - 1) % ex.pool.length];
   side(id);
 }

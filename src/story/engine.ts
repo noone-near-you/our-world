@@ -42,9 +42,10 @@ export function syncRealTime() {
 /** Default clothes + pose when switching world (picker or travel). Fresh random clothSeed every entry. */
 function worldDefaults(id: string) {
   const clothSeed = Math.floor(Math.random() * 1e9);
-  if (id === 'beach') return { outfit: 'beach' as const, pose: 'stand' as const, steam: false, showerOn: false, naked: false, clothSeed };
-  if (id === 'pool') return { outfit: 'swim' as const, pose: 'stand' as const, steam: false, showerOn: false, naked: false, clothSeed };
-  if (id === 'shower') return { outfit: 'swim' as const, pose: 'stand' as const, steam: false, showerOn: false, naked: false, clothSeed };
+  const rain = (id === 'garden' || id === 'beach') && Math.random() < 0.25;   // sometimes it rains outside
+  if (id === 'beach') return { outfit: 'beach' as const, pose: 'stand' as const, steam: false, showerOn: false, naked: false, clothSeed, disco: false, tint: '', rain };
+  if (id === 'pool') return { outfit: 'swim' as const, pose: 'stand' as const, steam: false, showerOn: false, naked: false, clothSeed, disco: false, tint: '', rain };
+  if (id === 'shower') return { outfit: 'swim' as const, pose: 'stand' as const, steam: false, showerOn: false, naked: false, clothSeed, disco: false, tint: '', rain };
   return {
     outfit: 'casual' as const,
     pose: 'sit' as const,
@@ -52,6 +53,7 @@ function worldDefaults(id: string) {
     showerOn: false,
     naked: false,
     clothSeed,
+    disco: false, tint: '', rain,
   };
 }
 
@@ -269,7 +271,7 @@ export async function goWorld(id: string, _opts?: { silent?: boolean }) {
 }
 // ---- side exchanges: he reacts, she answers, he replies, then the story resumes exactly where it was ----
 let sideOn = false, keep: { options: Opt[]; line: string; kind: 'say' | 'thought' } = { options: [], line: '', kind: 'say' };
-const counts: Record<Act, number> = { hug: 0, kiss: 0, tease: 0, slap: 0, flower: 0 };
+const counts: Record<Act, number> = { hug: 0, kiss: 0, tease: 0, slap: 0, flower: 0, feed: 0, hold: 0 };
 const sideTap = () => new Promise<void>(r => { sideRel = () => { sideRel = null; r(); }; });
 function resume() { sideOn = false; sideRel = null; set({ busy: false, options: keep.options, line: keep.line, kind: keep.kind, lineKey: get().lineKey + 1 }); }
 async function side(id: string) {

@@ -1,11 +1,16 @@
 import { useFrame } from '@react-three/fiber';
-import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
+import { useEffect, useMemo, useRef, useState, type MutableRefObject, type ComponentProps } from 'react';
 import * as THREE from 'three';
-import { sfx, type Sfx } from '../audio/audio';
+import { sfx, beatTime, type Sfx } from '../audio/audio';
 import { Outlines } from '@react-three/drei';
 import { get, set, useGame, subscribe } from '../state/store';
 import { tk, tkx, HEADW, BODY, FX } from './anchors';
 import type { Act } from '../story/script';
+
+/** REAL = softer, realistic shading (standard materials, no ink outlines). Set from store.look at the top of every Person render. */
+const REAL = { on: true };
+const OL = (p: ComponentProps<typeof Outlines>) => (REAL.on ? null : <Outlines {...p} />);
+const bTime = (T: number) => { const b = beatTime(); return b >= 0 ? b : T; };   // disco: lock the dance to the beat
 
 /* ================= ANIMATION DATA (edit the rows to change any scene) =================
  * Times in seconds. Anything a row does not mention falls back to the resting pose, and every change is eased.
@@ -53,6 +58,22 @@ export const ACTS: Record<Act, { dur: number; rows: Row[]; ev: [number, Sfx | 'h
     R(2.6, { yaw: 0.72, lean: 0.12, x: 0.08, hy: 0.55, hp: 0.15, sm: 0.9, bl: 0.45, nik: 1, nfc: 0.1 }, { yaw: -0.5, hy: -0.4, hp: 0.18, hr: 0.15, sm: 1, eye: 0.6, bl: 0.55, br: 0.2 }),
     R(3.5, { yaw: 0.5, lean: 0.05, hy: 0.45, sm: 1, bl: 0.5, nik: 0.3, nS: -0.35, nE: -1.0 }, { yaw: -0.3, hy: -0.25, hp: 0.08, sm: 1, eye: 0.9, bl: 0.45 }),
     R(4.8, { sm: 1, bl: 0.4 }, { sm: 1, bl: 0.4 })] },
+  feed: { dur: 5.6, zoom: 0.74, lines: ['Open wide… here comes the little airplane.', 'Mmm — good?'], ev: [[2.3, 'yummy'], [3.4, 'hearts'], [4.1, 'giggle']], rows: [
+    R(0),
+    R(0.8, { hy: 0.35, sm: 0.7, nS: -0.5, nE: -0.9, nfc: 0.6, nic: 0.4 }, { hy: -0.35, sm: 0.8, eye: 0.9, bl: 0.35 }),
+    R(1.7, { nik: 1, lean: 0.06, hy: 0.35, sm: 0.85, nfc: 0.8, nic: 0.6, bl: 0.3 }, { hy: -0.3, hp: 0.06, mo: 0.55, sm: 0.4, eye: 0.85, bl: 0.5, br: 0.25 }),
+    R(2.3, { nik: 1, lean: 0.07, hy: 0.35, sm: 0.9, nfc: 0.8, nic: 0.6 }, { hy: -0.3, hp: 0.06, mo: 0.1, mp: 0.3, sm: 0.6, eye: 0.4, bl: 0.7 }),
+    R(2.8, { nik: 0.35, nS: -0.45, nE: -1.0, hy: 0.35, sm: 1, nfc: 0.4, nic: 0.35 }, { hy: -0.25, mo: 0.3, sm: 0.9, eye: 0.2, bl: 0.8, sh: 0.01 }),
+    R(3.2, { nik: 0, nS: -0.1, nE: -0.4, hy: 0.3, sm: 1 }, { hy: -0.25, mo: 0.06, sm: 1, eye: 0.15, bl: 0.85 }),
+    R(3.6, { sm: 1 }, { mo: 0.25, sm: 1, eye: 0.2, bl: 0.85, sh: 0.01 }),
+    R(4.1, { sm: 1, bl: 0.4 }, { mo: 0.05, sm: 1, eye: 0.6, bl: 0.85 }),
+    R(4.7, { sm: 1, bl: 0.4 }, { mo: 0.2, sm: 1, bl: 0.8 }), R(5.6)] },
+  hold: { dur: 4.8, zoom: 0.78, lines: ['Your hand is so warm.', 'I’m not letting go for a bit.'], ev: [[1.5, 'chime'], [1.7, 'hearts'], [3.4, 'smile']], rows: [
+    R(0),
+    R(0.7, { hy: 0.4, sm: 0.6, nS: -0.5, nE: -0.6 }, { hy: -0.4, sm: 0.7, bl: 0.3, nS: -0.5, nE: -0.6 }),
+    R(1.5, { nik: 1, nfc: 0.65, nic: 0.6, hy: 0.5, sm: 0.9, bl: 0.55, eye: 0.75 }, { nik: 1, nfc: 0.65, nic: 0.6, hy: -0.5, sm: 0.95, bl: 0.6, eye: 0.7 }),
+    R(3.4, { nik: 1, nfc: 0.65, nic: 0.6, hy: 0.5, sm: 1, bl: 0.6, eye: 0.7 }, { nik: 1, nfc: 0.65, nic: 0.6, hy: -0.5, sm: 1, bl: 0.65, eye: 0.65 }),
+    R(4.2, { nik: 0.4, hy: 0.4, sm: 1, bl: 0.5 }, { nik: 0.4, hy: -0.4, sm: 1, bl: 0.5 }), R(4.8)] },
 };
 const sm = (x: number) => x * x * (3 - 2 * x);
 function sample(rows: Row[], t: number, who: 0 | 1, b: P): P {
@@ -89,9 +110,11 @@ const ik = { q: new THREE.Quaternion(), e: 0 }, fk = new THREE.Quaternion(), eu 
 /* ================= ANIME LOOK: cel shading + ink outlines + painted face ================= */
 const GRAD = (() => { const t = new THREE.DataTexture(new Uint8Array([150, 208, 255]), 3, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 const INK = '#3b2326';
-const toon = (c: string, e = 0.1) => <meshToonMaterial color={c} gradientMap={GRAD} emissive={c} emissiveIntensity={e} />;
+const toon = (c: string, e = 0.1) => REAL.on
+  ? <meshStandardMaterial color={c} roughness={0.56} metalness={0} emissive={c} emissiveIntensity={e * 0.6} />
+  : <meshToonMaterial color={c} gradientMap={GRAD} emissive={c} emissiveIntensity={e} />;
 const tl = (c: string, f: number) => new THREE.Color(c).multiplyScalar(f).getStyle(), lt = (c: string, f: number) => new THREE.Color(c).lerp(new THREE.Color('#ffffff'), f).getStyle();
-const outl = (o: number, s: V3 = [1, 1, 1]) => o > 0 ? <Outlines thickness={o / Math.cbrt(s[0] * s[1] * s[2])} color={INK} /> : null;
+const outl = (o: number, s: V3 = [1, 1, 1]) => o > 0 ? <OL thickness={o / Math.cbrt(s[0] * s[1] * s[2])} color={INK} /> : null;
 const TE = ({ p, s, c, o = 0, rot, e }: { p: V3; s: V3; c: string; o?: number; rot?: V3; e?: number }) => <mesh position={p} scale={s} rotation={rot} castShadow><sphereGeometry args={[1, 24, 16]} />{toon(c, e)}{outl(o, s)}</mesh>;
 const TC = ({ p, r, l, c, rot, o = 0 }: { p: V3; r: number; l: number; c: string; rot?: V3; o?: number }) => <mesh position={p} rotation={rot} castShadow><capsuleGeometry args={[r, l, 6, 16]} />{toon(c)}{outl(o)}</mesh>;
 // a pointed, flattened lock of hair (anime style). Hangs down from its origin.
@@ -148,6 +171,62 @@ function paintFace(x: CanvasRenderingContext2D, f: FP, her: boolean, eyeC: strin
   } else { x.beginPath(); x.moveTo(cx - 24, my - f.sm * 5); x.quadraticCurveTo(cx, my + 4 + f.sm * 16, cx + 24, my - f.sm * 5); x.stroke(); }
 }
 
+
+/** Realistic-style face: almond eyes with iris/limbal ring/catchlight, natural brows, nose shadow, soft lips. Same canvas layout as paintFace. */
+function paintFaceReal(x: CanvasRenderingContext2D, f: FP, her: boolean, eyeC: string, hairC: string) {
+  x.clearRect(0, 0, 384, 384); x.lineCap = 'round'; x.lineJoin = 'round';
+  const cx = 192, lash = her ? '#241617' : '#2d211e', brow = tl(hairC, 0.72);
+  for (const s of [-1, 1]) {
+    const ex = cx + s * 84, ey = 236, o = Math.min(f.open, 1.15);
+    const inX = ex - s * 33, inY = ey + 5, outX = ex + s * 34, outY = ey + 1 - (her ? 4 : 0);
+    if (f.bl > 0.05) { const g = x.createRadialGradient(ex + s * 6, ey + 58, 0, ex + s * 6, ey + 58, 50); g.addColorStop(0, `rgba(238,120,120,${Math.min(0.5, f.bl * 0.5)})`); g.addColorStop(1, 'rgba(238,120,120,0)');
+      x.fillStyle = g; x.beginPath(); x.ellipse(ex + s * 6, ey + 58, 50, 28, 0, 0, 6.3); x.fill(); }
+    // brow: three soft passes give a tapered, hair-like stroke
+    const by = ey - 60 - f.br * 12 - (s === 1 ? f.bs * 9 : 0), b0x = cx + s * 40, b0y = by + 6 - f.bt * 14, b1x = cx + s * 72, b1y = by - 10, b2x = cx + s * 108, b2y = by + 9 + f.bt * 7;
+    x.strokeStyle = brow;
+    for (const [w, a] of [[10, 0.22], [6.5, 0.45], [3.5, 0.9]] as [number, number][]) { x.globalAlpha = a; x.lineWidth = w; x.beginPath(); x.moveTo(b0x, b0y); x.quadraticCurveTo(b1x, b1y, b2x, b2y); x.stroke(); }
+    x.globalAlpha = 1;
+    const h = 17 * o, h2 = 9 * Math.min(1, o + 0.15);
+    const top = () => { x.moveTo(inX, inY); x.bezierCurveTo(inX + s * 14, ey - h * 1.5, outX - s * 14, ey - h * 1.6, outX, outY); };
+    if (o > 0.2) {
+      x.save(); x.beginPath(); top(); x.bezierCurveTo(outX - s * 14, ey + h2 * 1.4, inX + s * 14, ey + h2 * 1.4, inX, inY); x.closePath(); x.clip();
+      x.fillStyle = '#f2ece8'; x.fillRect(ex - 45, ey - 40, 90, 80);
+      const ir = 17, ic = ex + s * 1.5, iy = ey + 1;
+      let g = x.createRadialGradient(ic, iy, 2, ic, iy, ir); g.addColorStop(0, lt(eyeC, 0.35)); g.addColorStop(0.55, eyeC); g.addColorStop(1, tl(eyeC, 0.4));
+      x.fillStyle = g; x.beginPath(); x.arc(ic, iy, ir, 0, 6.3); x.fill(); x.strokeStyle = 'rgba(20,10,10,.5)'; x.lineWidth = 2; x.stroke();
+      x.fillStyle = '#120a0b'; x.beginPath(); x.arc(ic, iy, 7.2, 0, 6.3); x.fill();
+      x.fillStyle = 'rgba(255,255,255,.92)'; x.beginPath(); x.ellipse(ic - 6, iy - 6, 3.6, 4.4, 0, 0, 6.3); x.fill();
+      x.fillStyle = 'rgba(255,255,255,.45)'; x.beginPath(); x.arc(ic + 6, iy + 7, 2, 0, 6.3); x.fill();
+      g = x.createLinearGradient(0, ey - h * 1.6, 0, ey + h2); g.addColorStop(0, 'rgba(60,30,30,0.5)'); g.addColorStop(0.4, 'rgba(60,30,30,0)'); x.fillStyle = g; x.fillRect(ex - 45, ey - 40, 90, 80);
+      x.restore();
+      x.strokeStyle = lash; x.lineWidth = her ? 5 : 3.6; x.beginPath(); top(); x.stroke();
+      if (her) { x.lineWidth = 3.4; x.beginPath(); x.moveTo(outX, outY); x.quadraticCurveTo(outX + s * 8, outY - 3, outX + s * 14, outY - 9); x.stroke(); }
+      x.globalAlpha = 0.3; x.lineWidth = 2; x.beginPath(); x.moveTo(inX, inY); x.bezierCurveTo(inX + s * 14, ey + h2 * 1.4, outX - s * 14, ey + h2 * 1.4, outX, outY); x.stroke();
+      x.globalAlpha = 0.28; x.lineWidth = 2.4; x.beginPath(); x.moveTo(inX + s * 6, inY - 8); x.bezierCurveTo(inX + s * 18, ey - h * 1.5 - 9, outX - s * 16, ey - h * 1.6 - 9, outX + s * 2, outY - 5); x.stroke(); x.globalAlpha = 1;
+    } else {
+      x.strokeStyle = lash; x.lineWidth = her ? 4.6 : 3.4; x.beginPath();
+      if (f.sm > 0.6) { x.moveTo(ex - 30, ey + 8); x.quadraticCurveTo(ex, ey - 20, ex + 30, ey + 8); } else { x.moveTo(inX, inY); x.quadraticCurveTo(ex, ey + 13, outX, outY); }
+      x.stroke();
+    }
+  }
+  x.strokeStyle = 'rgba(150,92,84,.4)'; x.lineWidth = 3;
+  for (const s of [-1, 1]) { x.beginPath(); x.moveTo(192 + s * 5, 286); x.quadraticCurveTo(192 + s * 17, 296, 192 + s * 9, 302); x.stroke(); }
+  x.strokeStyle = 'rgba(190,120,110,.35)'; x.lineWidth = 2.5; x.beginPath(); x.moveTo(183, 303); x.quadraticCurveTo(192, 309, 201, 303); x.stroke();
+  const my = 326, mo = Math.max(f.mo, f.tg * 0.5), lipC = her ? '#c2606c' : '#b4766e', lipD = her ? '#8f3e4a' : '#7d4a46';
+  if (f.mp > 0.35 && mo < 0.2) { x.fillStyle = lipC; x.beginPath(); x.ellipse(cx, my + 2, 11 * (1 - f.mp * 0.2), 8.5, 0, 0, 6.3); x.fill(); }
+  else if (mo > 0.1) {
+    const w = 24 + f.sm * 8, dep = 8 + mo * 38, path = () => { x.beginPath(); x.moveTo(cx - w, my - f.sm * 6); x.quadraticCurveTo(cx, my + f.sm * 8, cx + w, my - f.sm * 6); x.bezierCurveTo(cx + w * 0.8, my + dep, cx - w * 0.8, my + dep, cx - w, my - f.sm * 6); };
+    x.fillStyle = '#5a1d28'; path(); x.fill(); x.save(); path(); x.clip();
+    if (mo > 0.25) { x.fillStyle = '#f4efe8'; x.fillRect(cx - w, my - 9, 2 * w, 9); }
+    x.fillStyle = f.tg > 0.2 ? '#e8808e' : '#b8505e'; x.beginPath(); x.ellipse(cx, my + dep * 0.78, 15 + f.tg * 5, 9 + f.tg * 12, 0, 0, 6.3); x.fill(); x.restore();
+    x.strokeStyle = lipC; x.lineWidth = 5; path(); x.stroke();
+  } else {
+    const w = 25 + f.sm * 5;
+    x.fillStyle = lipC; x.globalAlpha = 0.85; x.beginPath(); x.moveTo(cx - w, my - f.sm * 5); x.quadraticCurveTo(cx, my + 14 + f.sm * 10, cx + w, my - f.sm * 5); x.quadraticCurveTo(cx, my + 2 + f.sm * 3, cx - w, my - f.sm * 5); x.fill(); x.globalAlpha = 1;
+    x.strokeStyle = lipD; x.lineWidth = 3.2; x.beginPath(); x.moveTo(cx - w, my - f.sm * 5); x.quadraticCurveTo(cx, my + 3 + f.sm * 9, cx + w, my - f.sm * 5); x.stroke();
+  }
+}
+
 /** Deterministic PRNG from seed */
 const seeded = (seed: number) => {
   let s = (seed >>> 0) || 1;
@@ -182,8 +261,8 @@ function floralTex(seed: number) {
 }
 const Hat = ({ band }: { band: string }) => (   // round straw sun hat: dome + wide flat brim + ribbon
   <group position={[0, 0.37, 0]} rotation={[-0.06, 0, 0]}>
-    <mesh scale={[0.29, 0.26, 0.28]} castShadow><sphereGeometry args={[1, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />{toon('#e8cf8f')}<Outlines thickness={0.007 / 0.28} color={INK} /></mesh>
-    <mesh position={[0, 0.005, 0]} scale={[1, 1, 0.96]} castShadow><cylinderGeometry args={[0.5, 0.5, 0.014, 48]} />{toon('#e8cf8f')}<Outlines thickness={0.007} color={INK} /></mesh>
+    <mesh scale={[0.29, 0.26, 0.28]} castShadow><sphereGeometry args={[1, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />{toon('#e8cf8f')}<OL thickness={0.007 / 0.28} color={INK} /></mesh>
+    <mesh position={[0, 0.005, 0]} scale={[1, 1, 0.96]} castShadow><cylinderGeometry args={[0.5, 0.5, 0.014, 48]} />{toon('#e8cf8f')}<OL thickness={0.007} color={INK} /></mesh>
     <mesh position={[0, 0.045, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[1, 0.97, 1]}><torusGeometry args={[0.28, 0.02, 8, 32]} />{toon(band)}</mesh>
   </group>);
 /** Small flower cluster / gajra on her hair (shown after the flower act). */
@@ -209,6 +288,7 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
   const [, tick] = useState(0);
   useEffect(() => subscribe(() => tick(n => n + 1)), []);
   const gLive = get();
+  REAL.on = gLive.look !== 'anime';
   const outfit = gLive.outfit, world = gLive.world, naked = gLive.naked;
   const beach = outfit === 'beach', swim = outfit === 'swim';
   const seed = gLive.clothSeed ?? 1;
@@ -241,11 +321,14 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
   const W = useRef({ stage: i === 1 ? 0 : 2, turn: 0, ph: 0, s: i === 1 ? 1 : 0, yaw: 0, lie: 0, sink: 0, sp: 1, tr: 0, lastWorld: '' });   // stage: 0 walking in, 1 turning round, 2 seated
   const O = useRef<Record<string, THREE.Object3D>>({}), o = (k: string) => (n: THREE.Object3D | null) => { if (n) O.current[k] = n; };
   const hip = [useRef<THREE.Group>(null!), useRef<THREE.Group>(null!)], knee = [useRef<THREE.Group>(null!), useRef<THREE.Group>(null!)];
-  const trim = useMemo(() => tl(top, 0.78), [top]), shine = useMemo(() => lt(hc, 0.5), [hc]), eyeC = long ? '#7a4a6a' : '#4a6a8a', lipC = long ? '#e8808a' : '#d98a84';
+  const trim = useMemo(() => tl(top, 0.78), [top]), shine = useMemo(() => lt(hc, 0.5), [hc]), eyeC = REAL.on ? (long ? '#5b3a29' : '#4b3a2c') : (long ? '#7a4a6a' : '#4a6a8a'), lipC = long ? '#e8808a' : '#d98a84';
   const face = useMemo(() => { const cv = document.createElement('canvas'); cv.width = cv.height = 384; const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; return { ctx: cv.getContext('2d')!, tex, key: '' }; }, []);
   const faceMat = useMemo(() => new THREE.MeshBasicMaterial({ map: face.tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }), [face]);
   const headG = useMemo(() => taper(new THREE.SphereGeometry(1, 48, 36)), []), patchG = useMemo(() => taper(new THREE.SphereGeometry(1, 40, 30, Math.PI / 2 - FACE_PHI / 2, FACE_PHI, FACE_T0, FACE_TL)), []);
-  const torsoG = useMemo(() => new THREE.LatheGeometry([[0.12, 0], [0.135, 0.08], [0.16, 0.2], [0.18, 0.32], [0.19, 0.43], [0.165, 0.52], [0.09, 0.57], [0.055, 0.6], [0.001, 0.6]].map(([r, y]) => new THREE.Vector2(r, y)), 28), []);
+  const torsoG = useMemo(() => new THREE.LatheGeometry((REAL.on
+    ? (long ? [[0.1, 0], [0.12, 0.08], [0.135, 0.2], [0.17, 0.32], [0.185, 0.43], [0.165, 0.52], [0.09, 0.57], [0.055, 0.6], [0.001, 0.6]]
+            : [[0.13, 0], [0.15, 0.08], [0.175, 0.2], [0.2, 0.32], [0.22, 0.43], [0.195, 0.52], [0.1, 0.57], [0.06, 0.6], [0.001, 0.6]])
+    : [[0.12, 0], [0.135, 0.08], [0.16, 0.2], [0.18, 0.32], [0.19, 0.43], [0.165, 0.52], [0.09, 0.57], [0.055, 0.6], [0.001, 0.6]]).map(([r, y]) => new THREE.Vector2(r, y)), 28), [long, gLive.look]);
   useFrame(({ clock }, dt) => {
     if (!PT[i] && O.current.lipPt && O.current.jaw && O.current.nose && O.current.sh && O.current.bk1 && O.current.torso) PT[i] = { nose: O.current.nose, jaw: O.current.jaw, sh: O.current.sh, bk: [O.current.bk0, O.current.bk1], lip: O.current.lipPt, torso: O.current.torso };
     if (!PT[0] || !PT[1]) return;
@@ -270,6 +353,11 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
           nS: -1.2 + 0.9 * A, nZ: -d * 0.35, nE: -0.7 + 0.5 * A, fS: -1.2 + 0.9 * B, fZ: d * 0.35, fE: -0.7 + 0.5 * B, nik: 0, fik: 0, nfc: 0.1, ffc: 0.1 }; }
       else if (restP) tgt = { ...tgt, yaw: d * 0.12, hy: d * 0.55, hp: 0.75, hr: -d * 0.12, eye: 0.8, sm: 0.8, bl: 0.35, nS: -0.08, nE: -0.4, fS: -0.1, fE: -0.45, nik: 0, fik: 0 };
       else if (onLounger && g.pose === 'sit') tgt = { ...tgt, lean: onPool ? 0.04 : -tkx.ba, hp: onPool ? 0.1 : 0.1 + tkx.ba * 0.45, yaw: onPool ? d * 0.5 : tgt.yaw, hy: onPool ? d * 0.55 : tgt.hy };
+    }
+    if (g.disco && g.world === 'pool' && !bedP && !liveAct) {   // disco: both dance to the beat
+      const bt = bTime(T) * Math.PI * 2 + i * 0.9, s1 = Math.sin(bt), s2 = Math.sin(bt + Math.PI);
+      tgt = { ...tgt, roll: 0.12 * s1, lean: 0.05 * Math.abs(s1), yaw: tgt.yaw + 0.25 * Math.sin(T * 2 + i), hp: 0.1 + 0.1 * Math.abs(s1), hr: 0.15 * s2, hy: tgt.hy + 0.2 * Math.sin(T * 2),
+        nS: -1.6 + 0.9 * s1, nZ: -d * 0.35, nE: -0.9 + 0.5 * s1, fS: -1.6 + 0.9 * s2, fZ: d * 0.35, fE: -0.9 + 0.5 * s2, nik: 0, fik: 0, sm: 1, mo: 0.35, eye: 0.8, bl: 0.45 };
     }
     if (g.sleepy > 0) tgt = { ...tgt, eye: Math.max(0.02, tgt.eye * (1 - 1.2 * g.sleepy)), sm: g.sleepy > 0.7 ? Math.min(tgt.sm, 0.5) : tgt.sm, mo: 0 };   // drowsy / asleep eyes
     const p = cur.current; for (const k in b0) p[k] = D(p[k], tgt[k], k === 'nS' || k === 'hy' || k === 'nik' ? 14 : 9, dt);
@@ -467,7 +555,7 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
     }
     if (long && standP) N.pelvis.position.x = D(N.pelvis.position.x, walking ? 0 : 0.04, 4, dt); else N.pelvis.position.x = D(N.pelvis.position.x, 0, 6, dt);
     const br = T + i * 0.7, idle = Math.sin(br * 1.6) * 0.012, sw = walking ? Math.sin(w.ph) * 0.5 : 0, torso = N.torso, head = N.head;
-    torso.position.x = p.x; torso.position.y = 0.7 + idle * 0.6; torso.rotation.set(p.lean + idle, p.yaw, p.roll + Math.sin(T * 24) * p.sh);
+    torso.position.x = p.x; torso.position.y = 0.7 + idle * 0.6 + (g.disco && g.world === 'pool' ? 0.03 * Math.abs(Math.sin(bTime(T) * Math.PI * 2 + i * 0.9)) : 0); torso.rotation.set(p.lean + idle, p.yaw, p.roll + Math.sin(T * 24) * p.sh);
     head.rotation.order = 'YXZ'; head.rotation.set(p.hp + Math.sin(T * 24 + 1) * p.sh * 0.6, p.hy + Math.sin(br * 0.5) * 0.04, p.hr);
     const lg = lag.current; lg.y = D(lg.y, p.hy, 5, dt); lg.p = D(lg.p, p.hp, 5, dt); lg.r = D(lg.r, p.hr, 5, dt);   // hair trails behind head movement
     if (N.hairBack) N.hairBack.rotation.set((lg.p - p.hp) * 1.1 + Math.sin(T * 1.3) * 0.03, (lg.y - p.hy) * 0.9, (lg.r - p.hr) * 0.9);
@@ -488,19 +576,24 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
       if (act === 'kiss') return isN ? (i === 0 ? back(true) : g(o2.jaw)) : null;
       if (act === 'tease') return isN && i === 1 ? g(o2.nose) : null;
       if (act === 'slap') return isN ? (i === 1 ? g(o2.sh) : g(mine.sh)) : null;
+      if (act === 'feed') return isN && i === 0 ? g(o2.lip) : null;   // his hand brings the bite to her lips
+      if (act === 'hold') return isN ? g(mine.sh).add(g(o2.sh)).multiplyScalar(0.5).add(new THREE.Vector3(0, -0.42, 0.12)) : null;   // both near hands meet halfway
       if (act === 'flower') return isN && i === 0 ? g(o2.jaw).add(new THREE.Vector3(0, 0.22, -0.05)) : null; // his hand to her hair
       return null; };
     for (const isN of [true, false]) { const k = isN ? 'n' : 'f', sh = N[isN ? 'armN' : 'armF'], el = N[isN ? 'elN' : 'elF'], wt = clamp(p[k + 'ik'], 0, 1), tp = wt > 0.01 ? target(isN) : null;
       fk.setFromEuler(eu.set(p[k + 'S'] + sw * (isN ? 1 : -1), 0, p[k + 'Z'])); let e = p[k + 'E'];
       if (tp) { reach(sh, torso, tp, isN ? d : -d, ik); sh.quaternion.copy(fk).slerp(ik.q, wt); e = L(e, ik.e, wt); } else sh.quaternion.copy(fk);
-      el.rotation.set(e, 0, 0); N[k + 'Fin'].rotation.x = -p[k + 'fc'] * 1.4; N[k + 'Idx'].rotation.x = -p[k + 'ic'] * 1.4; }
+      el.rotation.set(e, 0, 0); N[k + 'Fin'].rotation.x = -p[k + 'fc'] * 1.1; N[k + 'Idx'].rotation.x = -p[k + 'ic'] * 1.1;
+      for (let j = 0; j < 3; j++) { const f2 = N[k + 'F2_' + j]; if (f2) f2.rotation.x = -p[k + 'fc'] * 1.2; } if (N[k + 'Idx2']) N[k + 'Idx2'].rotation.x = -p[k + 'ic'] * 1.2; }
+    if (N.nFood) N.nFood.visible = live && act === 'feed' && i === 0 && t > 0.2 && t < 2.3;   // the strawberry vanishes at the bite
+    if (N.fFood) N.fFood.visible = false;
     N.head.getWorldPosition(HEADW[i]);
     // no auto-splash while floating — only when she chooses to splash
     // ---- face: repaint the drawn face only when the expression actually changed ----
     if (T > blinkAt.current + 0.13) blinkAt.current = T + 2.5 + Math.random() * 3;
     const open = Math.min(1.2, p.eye) * (T > blinkAt.current && T < blinkAt.current + 0.13 ? 0.05 : 1), mo = Math.max(p.mo, p.tg * 0.5);
-    const key = [open, p.sm, mo, p.mp, p.tg, p.bl, p.br, p.bt, p.bs].map(v => Math.round(v * 16)).join(',');
-    if (key !== face.key) { face.key = key; paintFace(face.ctx, { open, sm: p.sm, mo, mp: p.mp, tg: p.tg, bl: p.bl, br: p.br, bt: p.bt, bs: p.bs }, !!long, eyeC, hc); face.tex.needsUpdate = true; }
+    const key = [open, p.sm, mo, p.mp, p.tg, p.bl, p.br, p.bt, p.bs].map(v => Math.round(v * 16)).join(',') + (g.look === 'anime' ? 'a' : 'r');
+    if (key !== face.key) { face.key = key; (g.look === 'anime' ? paintFace : paintFaceReal)(face.ctx, { open, sm: p.sm, mo, mp: p.mp, tg: p.tg, bl: p.bl, br: p.br, bt: p.bt, bs: p.bs }, !!long, eyeC, hc); face.tex.needsUpdate = true; }
     faceMat.color.setScalar(1 - 0.38 * tk.v);
     const pk = clamp((p.mp - 0.1) * 3, 0, 1), lb = N.lipBump; lb.scale.set(0.03 * (1 - 0.3 * p.mp) * pk + 0.0001, 0.012 * pk + 0.0001, (0.012 + 0.012 * p.mp) * pk + 0.0001); lb.position.z = 0.165 + 0.006 * p.mp;
   });
@@ -520,9 +613,26 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
           {/* wrist ball */}
           <TE p={[0, 0.02, 0]} s={[0.038, 0.038, 0.038]} c={skin} o={0.002} />
           <TE p={[0, -0.04, 0]} s={[0.042, 0.05, 0.024]} c={skin} o={0.004} />
-          <TE p={[ts * 0.04, -0.035, 0.012]} s={[0.014, 0.032, 0.014]} c={skin} />
-          <group ref={o(s + 'Idx')} position={[ts * 0.028, -0.085, 0]}><TC p={[0, -0.03, 0]} r={0.0105} l={0.045} c={skin} /></group>
-          <group ref={o(s + 'Fin')} position={[0, -0.085, 0]}>{[0.009, -0.009, -0.027].map(fx => <TC key={fx} p={[ts * fx, -0.028, 0]} r={0.0105} l={0.036} c={skin} />)}</group>
+          {/* thumb: two segments */}
+          <group position={[ts * 0.038, -0.03, 0.012]} rotation={[0, 0, ts * 0.55]}>
+            <TC p={[0, -0.022, 0]} r={0.0115} l={0.026} c={skin} />
+            <group position={[0, -0.05, 0]} rotation={[-0.35, 0, 0]}><TC p={[0, -0.018, 0]} r={0.0105} l={0.024} c={skin} /></group>
+          </group>
+          {/* index finger: two joints (curl applied in useFrame) */}
+          <group ref={o(s + 'Idx')} position={[ts * 0.028, -0.085, 0]}>
+            <TC p={[0, -0.02, 0]} r={0.0105} l={0.026} c={skin} />
+            <group ref={o(s + 'Idx2')} position={[0, -0.043, 0]}><TC p={[0, -0.016, 0]} r={0.0095} l={0.022} c={skin} /></group>
+          </group>
+          {/* middle / ring / little finger, each with two joints */}
+          <group ref={o(s + 'Fin')} position={[0, -0.085, 0]}>{([[0.009, 0.03], [-0.009, 0.032], [-0.027, 0.022]] as [number, number][]).map(([fx, fl], j) => (
+            <group key={j} position={[ts * fx, 0, 0]}>
+              <TC p={[0, -(fl / 2 + 0.01), 0]} r={0.0105} l={fl} c={skin} />
+              <group ref={o(s + 'F2_' + j)} position={[0, -(fl + 0.02), 0]}><TC p={[0, -(fl * 0.4 + 0.008), 0]} r={0.0095} l={fl * 0.8} c={skin} /></group>
+            </group>))}</group>
+          {/* a strawberry held between the fingertips (only shown while feeding) */}
+          <group ref={o(s + 'Food')} visible={false} position={[ts * 0.002, -0.135, 0.034]}>
+            <TE p={[0, 0, 0]} s={[0.03, 0.036, 0.03]} c="#e8334a" /><TE p={[0, 0.034, 0]} s={[0.019, 0.008, 0.019]} c="#4aa84a" />
+          </group>
         </group>
       </group>
     </group>
@@ -578,7 +688,7 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
             return <TE p={[0, -0.72, 0.07]} s={[0.078, 0.025, 0.142]} c={long ? '#e8808a' : '#4a6a8a'} />;
           })()}</group></group>)}
         <group ref={o('torso')} position={[0, 0.7, 0]}>
-          <mesh geometry={torsoG} scale={[1.15, 1, 0.78]} castShadow>{toon(top)}<Outlines thickness={0.007} color={INK} /></mesh>
+          <mesh geometry={torsoG} scale={[1.15, 1, 0.78]} castShadow>{toon(top)}<OL thickness={0.007} color={INK} /></mesh>
           {floral && <mesh geometry={torsoG} scale={[1.16, 1.005, 0.79]}><meshLambertMaterial map={floral} transparent depthWrite={false} polygonOffset polygonOffsetFactor={-2} /></mesh>}
           <TC p={[0, 0.63, 0]} r={0.048} l={0.08} c={skin} />
           <TE p={[0, 0.58, 0]} s={[0.08, 0.06, 0.07]} c={skin} o={0.002} />
@@ -591,7 +701,7 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
           <group ref={o('sh')} position={[d * 0.28, 0.56, 0]} /><group ref={o('hipF')} position={[-d * 0.2, 0.1, 0.07]} /><group ref={o('bk0')} position={[-0.2, 0.3, -0.13]} /><group ref={o('bk1')} position={[0.2, 0.3, -0.13]} />
           {limb('n')}{limb('f')}
           <group ref={o('head')} position={[0, 0.62, 0]}>
-            <mesh geometry={headG} position={[0, 0.28, 0]} scale={HS} castShadow>{toon(skin, 0.14)}<Outlines thickness={0.007 / 0.26} color={INK} /></mesh>
+            <mesh geometry={headG} position={[0, 0.28, 0]} scale={HS} castShadow>{toon(skin, 0.14)}<OL thickness={0.007 / 0.26} color={INK} /></mesh>
             <mesh geometry={patchG} position={[0, 0.28, 0]} scale={[HS[0] * 1.004, HS[1] * 1.004, HS[2] * 1.004]} material={faceMat} />
             {beach && <Hat band={palette.hat} />}
             <TE p={[-0.262, 0.25, 0]} s={[0.03, 0.05, 0.035]} c={skin} /><TE p={[0.262, 0.25, 0]} s={[0.03, 0.05, 0.035]} c={skin} />
@@ -599,7 +709,7 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
             <group ref={o('hairPt')} position={[d * 0.3, 0.36, 0.06]} /><group ref={o('lipPt')} position={[0, 0.08, 0.17]} /><group ref={o('nose')} position={[0, 0.164, 0.232]} /><group ref={o('jaw')} position={[0, 0.2, -0.2]} />
             {/* hair: cap with an anime highlight ring, a fringe of pointed locks, side locks; her long trailing back hair; his spikes + ahoge */}
             <group position={[0, 0.285, -0.012]} rotation={[-0.55, 0, 0]} scale={[0.285, 0.31, 0.28]}>
-              <mesh castShadow><sphereGeometry args={[1, 40, 28, 0, Math.PI * 2, 0, 1.9]} />{toon(hc, 0.07)}<Outlines thickness={0.007 / 0.29} color={INK} /></mesh>
+              <mesh castShadow><sphereGeometry args={[1, 40, 28, 0, Math.PI * 2, 0, 1.9]} />{toon(hc, 0.07)}<OL thickness={0.007 / 0.29} color={INK} /></mesh>
               <mesh scale={1.012}><sphereGeometry args={[1, 40, 10, Math.PI / 2 - 1.4, 2.8, 0.55, 0.2]} /><meshBasicMaterial color={shine} transparent opacity={0.4} side={THREE.DoubleSide} depthWrite={false} /></mesh></group>
             {/* soft fringe */}
             {(long

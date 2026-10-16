@@ -386,7 +386,54 @@ export function sfx(name: Sfx) {
   }
 }
 
-export function actSfx(act: 'hug' | 'kiss' | 'tease' | 'slap' | 'flower') {
+export function actSfx(act: 'hug' | 'kiss' | 'tease' | 'slap' | 'flower' | 'feed' | 'hold') {
   if (act === 'flower') sfx('chime');
+  else if (act === 'feed') sfx('yummy');
+  else if (act === 'hold') sfx('smile');
   else sfx(act);
+}
+
+/* ================= DISCO BEAT (pool) =================
+ * A small synthesized 120-BPM loop: kick, clap, hi-hats, octave bass and chord stabs. beatTime() lets lights/dancing lock to it. */
+export const BEAT_BPM = 120;
+let discoT0 = -1, discoTimer: number | null = null, discoStep = 0, discoNext = 0, discoGain: GainNode | null = null;
+/** seconds since the beat started (negative during the short count-in), or -1 when no beat is playing */
+export const beatTime = () => (ctx && discoT0 >= 0 && discoTimer !== null ? ctx.currentTime - discoT0 : -1);
+const BASS = [55, 110, 55, 110, 65.41, 130.81, 73.42, 146.83];
+function dTone(c: AudioContext, out: AudioNode, t: number, f0: number, f1: number, dur: number, vol: number, type: OscillatorType = 'sine', lp = 0) {
+  const o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.setValueAtTime(f0, t); if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  if (lp) { const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = lp; o.connect(f).connect(g); } else o.connect(g);
+  g.connect(out); o.start(t); o.stop(t + dur + 0.03);
+}
+function dNoise(c: AudioContext, out: AudioNode, t: number, dur: number, vol: number, freq: number, type: BiquadFilterType = 'bandpass') {
+  const buf = ensureNoise(); if (!buf) return;
+  const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+  src.buffer = buf; f.type = type; f.frequency.value = freq; f.Q.value = 0.9;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(f).connect(g).connect(out); src.start(t); src.stop(t + dur + 0.03);
+}
+function discoStepAt(c: AudioContext, out: AudioNode, s: number, t: number) {
+  if (s % 4 === 0) dTone(c, out, t, 165, 46, 0.2, 1.0);                               // kick on every beat
+  if (s === 4 || s === 12) { dNoise(c, out, t, 0.13, 0.5, 1700); dTone(c, out, t, 220, 160, 0.08, 0.18, 'triangle'); }   // clap on 2 and 4
+  if (s % 4 === 2) dNoise(c, out, t, 0.09, 0.2, 8500, 'highpass');                    // open hat off-beat
+  else if (s % 2 === 1) dNoise(c, out, t, 0.03, 0.07, 9500, 'highpass');              // ghost hats
+  if (s % 2 === 0) dTone(c, out, t, BASS[(s / 2) % 8], BASS[(s / 2) % 8], 0.2, 0.34, 'sawtooth', 520);   // disco octave bass
+  if (s === 3 || s === 6 || s === 11 || s === 14) for (const f of [220, 261.63, 329.63]) dTone(c, out, t, f, f, 0.09, 0.05, 'square', 2600);   // chord stabs
+}
+export function startDiscoBeat() {
+  if (discoTimer !== null) return;
+  const c = getAudioCtx(), out = c.createGain();
+  out.gain.value = get().soundOn ? 0.55 : 0.0001; out.connect(c.destination); discoGain = out;
+  discoT0 = c.currentTime + 0.15; discoNext = discoT0; discoStep = 0;
+  const spb = 60 / BEAT_BPM / 4;
+  const tick = () => { while (discoNext < c.currentTime + 0.2) { if (get().soundOn) discoStepAt(c, out, discoStep % 16, discoNext); discoStep++; discoNext += spb; } };
+  tick(); discoTimer = window.setInterval(tick, 40);
+}
+export function stopDiscoBeat() {
+  if (discoTimer === null) return;
+  clearInterval(discoTimer); discoTimer = null; discoT0 = -1;
+  const g = discoGain; discoGain = null;
+  if (g && ctx) { try { g.gain.setValueAtTime(g.gain.value, ctx.currentTime); g.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 0.25); } catch { /* */ } setTimeout(() => { try { g.disconnect(); } catch { /* */ } }, 400); }
 }

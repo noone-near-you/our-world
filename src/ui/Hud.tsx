@@ -173,8 +173,11 @@ function Her() {
     pick(o);
   }}>{o.label.replace(/[\u201c\u201d"]/g, '').trim()}</button>)}</div>;
 }
-const ACTS: [Act, string][] = [['hug', 'Hug'], ['kiss', 'Kiss'], ['tease', 'Tease'], ['slap', 'Slap']];
+const ACTS: [Act, string][] = [['hug', 'Hug'], ['kiss', 'Kiss'], ['tease', 'Tease'], ['slap', 'Slap'], ['hold', 'Hold hands'], ['feed', 'Feed']];
+const FEED_WORLDS = ['kitchen', 'garden', 'beach'];
 const ICONS: Record<Act, string> = {
+  feed: 'M7 3v6a2.5 2.5 0 0 0 5 0V3 M9.5 3v18 M17 3c-2 2-3 5-3 8h3v10',
+  hold: 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z',
   hug: 'M12 11.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z M4 20c0-5 3.4-7.5 8-7.5s8 2.5 8 7.5 M6.5 15.5l11 2.5 M17.5 15.5l-11 2.5',
   kiss: 'M3 12c3-4 6-4 9-2 3-2 6-2 9 2-3 5-6 6-9 6s-6-1-9-6Z M3 12h18',
   tease: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z M9 9.5h.01 M15 9.5h.01 M8 14c1.5 2 6.5 2 8 0',
@@ -186,6 +189,16 @@ const Icon = ({ a }: { a: Act }) => (
     <path d={ICONS[a]} />
   </svg>
 );
+const TINTS = ['#ff4fa3', '#7a5cff', '#2fd0ff', '#3dff9e', '#ffd24a', '#ff7a3d', '#c14dff', '#ff5a5a', '#4a8bff', '#ff8fd0'];
+const svgp = { viewBox: '0 0 24 24', width: 26, height: 26, fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true } as const;
+const PaletteIcon = () => <svg {...svgp}><path d="M12 3a9 9 0 1 0 0 18c1.4 0 2-.9 1.6-2-.4-1.1.2-2 1.4-2H17a4 4 0 0 0 4-4c0-5-4-10-9-10Z" /><circle cx="7.5" cy="11" r="1" /><circle cx="10" cy="7" r="1" /><circle cx="15" cy="7.5" r="1" /></svg>;
+const ResetIcon = () => <svg {...svgp}><path d="M4 12a8 8 0 1 0 2.6-5.9 M4 4v4.5h4.5" /></svg>;
+const BubbleIcon = () => <svg {...svgp}><circle cx="9" cy="14" r="5" /><circle cx="17" cy="8" r="3" /><circle cx="6" cy="5" r="1.6" /><path d="M7 12.5a3 3 0 0 1 2-1.5" /></svg>;
+const BallIcon = () => <svg {...svgp}><circle cx="12" cy="12" r="9" /><path d="M12 3c-3 3-3 15 0 18 M12 3c3 3 3 15 0 18 M3.5 9c5 2 12 2 17 0 M3.5 15c5-2 12-2 17 0" /></svg>;
+const RainIcon = () => <svg {...svgp}><path d="M7 15a4 4 0 0 1 .6-7.9A5 5 0 0 1 17 8.5 3.5 3.5 0 0 1 17 15H7Z M8 18l-1 2.5 M12 18l-1 2.5 M16 18l-1 2.5" /></svg>;
+const LookIcon = () => <svg {...svgp}><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" /></svg>;
+const DiscoIcon = () => <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 2v3 M12 5a7 7 0 1 0 0 14a7 7 0 0 0 0-14Z M5 12h14 M7 7.5c3 1.6 7 1.6 10 0 M7 16.5c3-1.6 7-1.6 10 0 M12 5c-2.2 2.2-2.2 11.8 0 14 M12 5c2.2 2.2 2.2 11.8 0 14" /></svg>;
+const FlowersIcon = () => <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="9" r="1.6" /><path d="M12 7.4c-1-2.6 1-3.4 0-5 M12 7.4c1-2.6-1-3.4 0-5 M10.4 9c-2.6-1-3.4 1-5 0 M13.6 9c2.6-1 3.4 1 5 0 M10.9 10.3c-1.5 2.2-3.3 1.2-4.4 2.6 M13.1 10.3c1.5 2.2 3.3 1.2 4.4 2.6 M5 17l.01 0 M19 16l.01 0 M9 20l.01 0 M15 21l.01 0 M12 17l.01 0" /></svg>;
 const LampIcon = () => <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8.5 3h7l3 8h-13l3-8Z M12 11v7 M8 21h8 M9.5 18h5" /></svg>;
 
 const WORLDS: { id: string; label: string; emoji: string; color: string }[] = [
@@ -558,7 +571,7 @@ function MusicBar() {
 }
 
 export function Hud() {
-  const { started, title, busy, gfSeated, fade, world, lamp, pose, scene, caption, sleepy, intro } = useGame(g => g);
+  const { started, title, busy, gfSeated, fade, world, lamp, pose, scene, caption, sleepy, intro, disco, tint, rain, look } = useGame(g => g);
   useZzz(sleepy >= 1);
   // acts need them seated & free; lamp stays available anytime in bedroom
   const actsLocked = busy || !gfSeated || (pose !== 'sit' && pose !== 'bed') || scene;
@@ -578,8 +591,19 @@ export function Hud() {
         <WorldBar />
       </div>
       <div className="rail" role="group" aria-label="Actions">
-        {ACTS.map(([a, l]) => <button key={a} aria-label={l} title={l} disabled={actsLocked} onClick={() => { blip(560); rail(a); }}><Icon a={a} /></button>)}
+        {ACTS.filter(([a]) => a !== 'feed' || FEED_WORLDS.includes(world)).map(([a, l]) => <button key={a} aria-label={l} title={l} disabled={actsLocked} onClick={() => { blip(560); rail(a); }}><Icon a={a} /></button>)}
         {world === 'bedroom' && <button className={`lampbtn${lamp ? ' on' : ''}`} aria-label={lamp ? 'Turn the lamp off' : 'Turn the lamp on'} title={lamp ? 'Lamp off' : 'Lamp on'} disabled={lampLocked} onClick={() => { blip(lamp ? 380 : 620); toggleLamp(); }}><LampIcon /></button>}
+        {world === 'bedroom' && <>
+          <button className="funbtn" aria-label="Random light colour" title="Random light colour" disabled={lampLocked} style={tint ? { boxShadow: `0 0 18px ${tint}`, color: tint } : undefined}
+            onClick={() => { blip(660); const o = TINTS.filter(c => c !== tint); set({ tint: o[Math.floor(Math.random() * o.length)] }); }}><PaletteIcon /></button>
+          <button className="funbtn" aria-label="Reset light colour" title="Reset light" disabled={lampLocked || !tint} onClick={() => { blip(420); set({ tint: '' }); }}><ResetIcon /></button>
+        </>}
+        {world === 'kitchen' && <button className="funbtn" aria-label="Blow bubbles" title="Bubbles" disabled={scene} onClick={() => { blip(700); try { sfx('chime'); } catch { /* */ } set({ bubbles: Date.now() }); }}><BubbleIcon /></button>}
+        {world === 'beach' && <button className="funbtn" aria-label="Throw a beach ball" title="Beach ball" disabled={scene} onClick={() => { blip(560); try { sfx('giggle'); } catch { /* */ } set({ ball: Date.now() }); }}><BallIcon /></button>}
+        {(world === 'garden' || world === 'beach') && <button className={`funbtn${rain ? ' on' : ''}`} aria-label={rain ? 'Stop the rain' : 'Make it rain'} title={rain ? 'Stop rain' : 'Rain'} onClick={() => { blip(rain ? 400 : 500); set({ rain: !rain }); }} style={rain ? { color: '#9fd0ff', boxShadow: '0 0 16px rgba(120,180,255,.6)' } : undefined}><RainIcon /></button>}
+        <button className="funbtn" aria-label="Switch character look" title={look === 'real' ? 'Look: realistic (tap for anime)' : 'Look: anime (tap for realistic)'} onClick={() => { blip(480); set({ look: look === 'real' ? 'anime' : 'real' }); }}><LookIcon /></button>
+        {world === 'pool' && <button className={`discobtn${disco ? ' on' : ''}`} aria-label={disco ? 'Turn the disco lights off' : 'Turn on disco lights'} title={disco ? 'Disco off' : 'Disco lights'} disabled={scene} onClick={() => { blip(disco ? 380 : 700); set({ disco: !disco }); }}><DiscoIcon /></button>}
+        {world === 'garden' && <button className="flowerbtn" aria-label="Sprinkle flowers" title="Sprinkle flowers" disabled={scene} onClick={() => { blip(640); try { sfx('chime'); } catch { /* */ } set({ petals: Date.now() }); }}><FlowersIcon /></button>}
       </div>
     </>}
   </>);

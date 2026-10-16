@@ -13,7 +13,7 @@ import type { Opt, Game } from '../state/store';
 //   { tone: 'soft' | 'tease' }   how he talks later (use with route: g => g.tone === 'tease' ? 'node_t' : undefined)
 //   route: (game) => id    optional: jump to another node instead (e.g. not in the bedroom)
 // `then: 'id'` continues straight into another node with no choice in between.
-export type Act = 'hug' | 'kiss' | 'tease' | 'slap' | 'flower';
+export type Act = 'hug' | 'kiss' | 'tease' | 'slap' | 'flower' | 'feed' | 'hold';
 export type Step = string | { thought: string } | { act: Act } | { sfx: Sfx } | { gf: 'enter' } | { tod: 'morning' | 'afternoon' | 'evening' | 'night' } | { wait: number }
   | { lamp: boolean } | { pose: Game['pose'] } | { sleepy: number } | { skip: string; ms?: number; intimate?: boolean } | { scene: boolean }
   | { dress: 'casual' | 'beach' | 'swim'; caption?: string; pose?: Game['pose'] } | { set: Partial<Game> } | { go: string } | { tone: 'soft' | 'tease' };
@@ -1461,7 +1461,32 @@ mk('rs_many', ["Again?! Is this a new love language?", "Because it’s a painful
   ["“Maybe.”", ["Then I’m fluent already.", "Just aim for the shoulder next time."]],
   ["“You started it.”", ["I did NOT. …Did I?", "Whatever. I deserve it. Probably."]],
   ["“Sorry. Last time.”", ["You said that last time.", "I’ll believe it when I see it."]]]);
+mk('rf1', ["Open wide… here comes the little airplane.", "Mmm. Good?"], [
+  ["“So good. Did you make this?”", ["With love. And a little bit of skill.", "Say ‘aah’ again, I have more."]],
+  ["“A strawberry? Cute.”", ["Cute like you. Obviously.", "Only the best berries for you."]],
+  ["“You’re spoiling me.”", ["That’s the plan.", "Get used to it."]]]);
+mk('rf2', ["Last bite. I swear I’m not stealing yours.", "…Okay, maybe one."], [
+  ["“Hey! That one was mine.”", ["Sharing is caring.", "You’re cute when you’re annoyed."]],
+  ["“Feed me more.”", ["Open up, then.", "Ha. Greedy. I love it."]],
+  ["“Thank you, chef.”", ["Anytime, my love.", "I’ll take payment in kisses."]]]);
+mk('rf_many', ["Again?! You’re going to make me your full-time chef.", "Fine. Open up."], [
+  ["“Worth it.”", ["Obviously. Look at this service.", "Five stars, I hope."]],
+  ["“I’m still hungry.”", ["You’re always hungry. It’s adorable.", "Then I’ll keep feeding you."]],
+  ["“My turn next.”", ["Deal. But no tickling.", "…Okay, a little tickling."]]]);
+mk('rhd1', ["Your hand is so warm.", "…I’m not letting go for a bit."], [
+  ["“Then don’t.”", ["Okay. I won’t.", "Best decision of the day."]],
+  ["“Your hands are cold!”", ["Then warm them up for me.", "Hold tighter. Problem solved."]],
+  ["“It fits perfectly.”", ["Like it was made for it.", "I noticed that too."]]]);
+mk('rhd2', ["Hey. Give me your hand.", "There. Perfect."], [
+  ["“What are you planning?”", ["Nothing. Just this.", "Staying like this. That’s all."]],
+  ["“Don’t let go.”", ["Never planning to.", "You’ll have to pry me off."]],
+  ["“You’re sweet.”", ["Only for you.", "Don’t tell anyone."]]]);
+mk('rhd_many', ["We’ve been holding hands this whole time, haven’t we?", "I’m not complaining."], [
+  ["“Me neither.”", ["Good. Then it’s settled.", "Forever, then."]],
+  ["“My hand is falling asleep.”", ["Okay… switching hands.", "I’ll hold the other one."]],
+  ["“Never let go.”", ["Promise.", "Cross my heart."]]]);
 export const exchanges: Record<Act, { pool: string[]; many: string }> = {
+  feed: { pool: ['rf1', 'rf2'], many: 'rf_many' }, hold: { pool: ['rhd1', 'rhd2'], many: 'rhd_many' },
   kiss: { pool: ['rk1', 'rk2', 'rk3'], many: 'rk_many' }, hug: { pool: ['rh1', 'rh2', 'rh3'], many: 'rh_many' },
   tease: { pool: ['rt1', 'rt2', 'rt3'], many: 'rt_many' }, slap: { pool: ['rs1', 'rs2'], many: 'rs_many' },
   flower: { pool: ['rk1'], many: 'rk_many' },

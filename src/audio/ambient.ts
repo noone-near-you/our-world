@@ -262,6 +262,28 @@ export function setShowerWater(on: boolean) {
   else stopWater();
 }
 
+
+/* ---- rain: soft hiss + low patter (garden / beach weather) ---- */
+let rainNodes: { master: GainNode; stops: (() => void)[] } | null = null;
+export function setRainSound(on: boolean) {
+  if (!on || !get().soundOn) {
+    if (!rainNodes) return;
+    const old = rainNodes; rainNodes = null;
+    try { old.master.gain.linearRampToValueAtTime(0.0001, old.master.context.currentTime + 0.8); } catch { /* */ }
+    setTimeout(() => { old.stops.forEach(fn => fn()); try { old.master.disconnect(); } catch { /* */ } }, 1000);
+    return;
+  }
+  if (rainNodes) return;
+  const ctx = getAudioCtx(), master = ctx.createGain();
+  master.gain.value = 0.0001; master.connect(ctx.destination);
+  const stops = [
+    ...noiseLoop(ctx, master, { freq: 3800, q: 0.4, type: 'highpass', vol: 0.5, lfoHz: 0.17, lfoDepth: 500 }),
+    ...noiseLoop(ctx, master, { freq: 1300, q: 0.5, type: 'bandpass', vol: 0.35, lfoHz: 0.1, lfoDepth: 200 }),
+  ];
+  master.gain.linearRampToValueAtTime(musicDucked ? 0.03 : 0.1, ctx.currentTime + 1.2);
+  rainNodes = { master, stops };
+}
+
 export function setAmbientWorld(world: string) {
   wantedWorld = world;
   // always warm cache (even before sound is on) so first play is instant on CDN

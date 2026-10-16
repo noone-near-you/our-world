@@ -6,7 +6,8 @@ import { sfx, startHeavyBreath, stopHeavyBreath, type Sfx } from '../audio/audio
 import { get, set, useGame, subscribe } from '../state/store';
 import { registerActRunner } from '../story/engine';
 import type { Act } from '../story/script';
-import { anch, tk, tkx, HEADW, BODY } from './anchors';
+import { anch, tk, tkx, dsc, mood, wet, HEADW, BODY } from './anchors';
+import { DiscoLights, PetalRain, BubbleBurst, BeachBall, Birds, Scorpions, Fireflies, Rain } from './Effects';
 import { BeachSet, PoolSet, SKY } from './BeachSet';
 
 import { ACTS, Person, mat, Ell, Cap, type Ctl, type V3 } from './rig';
@@ -60,7 +61,7 @@ function Window() {
 /* ---------- lamp shade glow (follows tk.l), bedside table with the table lamp, and the blanket they pull over themselves ---------- */
 const LampMat = ({ on = '#ffd48a', off = '#43342a' }: { on?: string; off?: string }) => {
   const m = useRef<THREE.MeshBasicMaterial>(null!), a = useMemo(() => new THREE.Color(on), [on]), b = useMemo(() => new THREE.Color(off), [off]);
-  useFrame(() => { m.current.color.copy(b).lerp(a, tk.l); });
+  useFrame(() => { m.current.color.copy(b).lerp(a, tk.l).lerp(mood.c, mood.w * tk.l * 0.85); });
   return <meshBasicMaterial ref={m} side={THREE.DoubleSide} />;
 };
 const TableLamp = () => (
@@ -572,7 +573,9 @@ const CFG: Record<string, { bg: string; hemi: [string, string, number]; sun: [st
   pool: { bg: '#c8b8a0', hemi: ['#fff0e0', '#8a7a68', 1.05], sun: ['#ffe8c8', 0.6], lamp: 2.2, Set: PoolSet },
   shower: { bg: '#2a3038', hemi: ['#e8f0f6', '#6a7888', 1.1], sun: ['#d8e4f0', 1.3], lamp: 2, Set: ShowerSet },
 };
-const NIGHT_BG = new THREE.Color('#0d1226');
+const RAIN_BG = new THREE.Color('#6f7d8a');
+const _tint = new THREE.Color(), _warm = new THREE.Color('#ffbf70');
+const NIGHT_BG = new THREE.Color('#0d1226'), DISCO_BG = new THREE.Color('#120a24');
 const _v = new THREE.Vector3();
 const proj = (cam: THREE.Camera, size: { width: number; height: number }, x: number, y: number, z: number) => { _v.set(x, y, z).project(cam); return { x: (_v.x + 1) / 2 * size.width, y: (1 - _v.y) / 2 * size.height }; };
 function Scene({ ctl }: { ctl: Ctl }) {
@@ -581,7 +584,7 @@ function Scene({ ctl }: { ctl: Ctl }) {
   const g0 = get();
   const tod = g0.tod, world = g0.world, cfg = CFG[world] ?? CFG.bedroom;
   const lampOn = g0.lamp, pose = g0.pose;
-  const moon = useRef<THREE.DirectionalLight>(null!), tbl = useRef<THREE.PointLight>(null!);
+  const amb = useRef<THREE.AmbientLight>(null!), moon = useRef<THREE.DirectionalLight>(null!), tbl = useRef<THREE.PointLight>(null!);
   const rg = useRef({ bw: 0, sw: 0, hw: 0 }), fog = useRef(new THREE.Fog('#6fc4f6', 28, 80)), hemi = useRef<THREE.HemisphereLight>(null!), lamp = useRef<THREE.PointLight>(null!), sun = useRef<THREE.DirectionalLight>(null!), st = useRef({ x: 1.9, lx: 0.6 }), bg = useRef(new THREE.Color());
 
   // hard-snap lighting colors when world changes (args only apply on first mount)
@@ -628,6 +631,26 @@ function Scene({ ctl }: { ctl: Ctl }) {
     tkx.ba = D(tkx.ba, onOut && pz === 'rest' && !liveAct ? 1.05 : 0.55, 2.5, dt);
     if (onB) { bg.current.copy(SKY.day).lerp(SKY.dusk, tkx.d).lerp(NIGHT_BG, tk.v); scene.background = bg.current; fog.current.color.copy(bg.current); scene.fog = fog.current; sun.current.color.set('#fff4d8').lerp(new THREE.Color('#ff9a55'), tkx.d); sun.current.intensity *= 1 - 0.45 * tkx.d; hemi.current.intensity *= 1 - 0.25 * tkx.d; }
     else { scene.fog = null; scene.background = bg.current.set(cfgNow.bg).lerp(NIGHT_BG, tk.v); }
+    // bedroom mood light: tint the lamps + room light with the chosen colour
+    mood.w = D(mood.w, worldNow === 'bedroom' && g.tint ? 1 : 0, 3, dt);
+    if (g.tint) mood.c.lerp(_tint.set(g.tint), 1 - Math.exp(-6 * dt));
+    if (mood.w > 0.002) {
+      lamp.current.color.copy(_warm).lerp(mood.c, mood.w); tbl.current.color.copy(_warm).lerp(mood.c, mood.w);
+      lamp.current.intensity *= 1 + 0.6 * mood.w; tbl.current.intensity *= 1 + 0.6 * mood.w;
+      hemi.current.color.set(cfgNow.hemi[0]).lerp(mood.c, 0.5 * mood.w);
+    } else { lamp.current.color.copy(_warm); tbl.current.color.copy(_warm); hemi.current.color.set(cfgNow.hemi[0]); }
+    // rainy weather outside: dim + grey
+    wet.v = D(wet.v, (worldNow === 'garden' || worldNow === 'beach') && g.rain ? 1 : 0, 1.5, dt);
+    if (wet.v > 0.001) {
+      hemi.current.intensity *= 1 - 0.3 * wet.v; sun.current.intensity *= 1 - 0.75 * wet.v;
+      bg.current.lerp(RAIN_BG, 0.65 * wet.v);
+      if (worldNow === 'beach' && scene.fog) (scene.fog as THREE.Fog).color.copy(bg.current);
+    }
+    // pool disco mode: dim the room so the coloured lights stand out
+    dsc.v = D(dsc.v, worldNow === 'pool' && g.disco ? 1 : 0, 4, dt);
+    hemi.current.intensity *= 1 - 0.8 * dsc.v; sun.current.intensity *= 1 - 0.85 * dsc.v; lamp.current.intensity *= 1 - 0.8 * dsc.v;
+    if (amb.current) amb.current.intensity = 0.45 * (1 - 0.75 * dsc.v);
+    if (dsc.v > 0.001) bg.current.lerp(DISCO_BG, 0.9 * dsc.v);
     const c = ctl.current; if (c.act && c.t0 < 0) c.t0 = T;
     const z = c.act && T - c.t0 < ACTS[c.act].dur ? c.zoom : 1, asp = size.width / size.height, cam = camera as THREE.PerspectiveCamera;
     // pool: frame the BACK edge where they sit (against the back wall, facing the camera)
@@ -660,7 +683,7 @@ function Scene({ ctl }: { ctl: Ctl }) {
     anch.mid = { x: (anch.him.x + anch.her.x) / 2, y: Math.min(anch.him.y, anch.her.y) + 30 };
   });
   return (<>
-    <ambientLight intensity={0.45} />
+    <ambientLight ref={amb} intensity={0.45} />
     <hemisphereLight ref={hemi} args={[cfg.hemi[0], cfg.hemi[1], 1]} />
     <pointLight ref={lamp} position={[-2.2, 2.6, -1.8]} intensity={cfg.lamp} distance={9} color="#ffbf70" castShadow shadow-mapSize={[512, 512]} />
     <directionalLight ref={sun} position={[4, 5, -1]} intensity={cfg.sun[1]} color={cfg.sun[0]} castShadow shadow-mapSize={[1024, 1024]} shadow-camera-left={-6} shadow-camera-right={6} shadow-camera-top={6} shadow-camera-bottom={-6} />
@@ -668,10 +691,10 @@ function Scene({ ctl }: { ctl: Ctl }) {
     <directionalLight ref={moon} position={[3.2, 3.2, -1.5]} intensity={0} color="#8fa8ff" />
     <group key={`world-${world}`}>
       {world === 'bedroom' && <BedroomSet />}
-      {world === 'kitchen' && <KitchenSet />}
-      {world === 'garden' && <GardenSet />}
-      {world === 'beach' && <BeachSet />}
-      {world === 'pool' && <PoolSet />}
+      {world === 'kitchen' && <><KitchenSet /><BubbleBurst /></>}
+      {world === 'garden' && <><GardenSet /><PetalRain /><Birds kind="garden" /><Fireflies area="garden" /><Rain /></>}
+      {world === 'beach' && <><BeachSet /><Birds kind="gull" /><Scorpions /><BeachBall /><Fireflies area="beach" /><Rain /></>}
+      {world === 'pool' && <><PoolSet /><DiscoLights /></>}
       {world === 'shower' && <ShowerSet />}
     </group>
     <PoolClothes />

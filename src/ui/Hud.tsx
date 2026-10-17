@@ -319,8 +319,21 @@ function StartTap() {
   );
 }
 
+/** taps are ignored until `ms` after the screen appeared (and the phone is in landscape) — a quick double tap can't skip a screen */
+function useTapDelay(ms: number, active: boolean) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    setReady(false);
+    if (!active) return;
+    const t = setTimeout(() => setReady(true), ms);
+    return () => clearTimeout(t);
+  }, [active, ms]);
+  return ready;
+}
+
 function EarphoneThenBrightness() {
   const land = useLandscape();
+  const ready = useTapDelay(3000, land);
   useEffect(() => {
     if(!land) return;
     const t = setTimeout(() => set({ intro: 'brightness' }), 5000);
@@ -331,9 +344,8 @@ return (
     <div
       className="intro-screen pre-screen"
       key="earphone"
-      onClick={() => set({ intro: 'brightness' })}
-      onTouchEnd={() => set({ intro: 'brightness' })}
-      style={{ cursor: 'pointer' }}
+      onClick={() => { if (ready) set({ intro: 'brightness' }); }}
+      style={{ cursor: ready ? 'pointer' : 'default' }}
     >
       <div className="pre-icon warn-icon" aria-hidden>⚠️</div>
       <p className="pre-title">Please plug in earphones</p>
@@ -342,7 +354,7 @@ return (
         <br />
         Headphones are recommended
       </p>
-      <p className="intro-hint">Tap anywhere to continue</p>
+      <p className="intro-hint" style={{ visibility: ready ? 'visible' : 'hidden' }}>Tap anywhere to continue</p>
     </div>
   );
 
@@ -350,6 +362,7 @@ return (
 
 function BrightnessAuto() {
   const land = useLandscape();
+  const ready = useTapDelay(3000, land);
   useEffect(() => {
     if(!land) return;
     const t = setTimeout(() => set({ intro: 'gate' }), 5000);
@@ -360,9 +373,8 @@ return (
   <div
     className="intro-screen pre-screen"
     key="brightness"
-    onClick={() => set({ intro: 'gate' })}
-    onTouchEnd={() => set({ intro: 'gate' })}
-    style={{ cursor: 'pointer' }}
+    onClick={() => { if (ready) set({ intro: 'gate' }); }}
+    style={{ cursor: ready ? 'pointer' : 'default' }}
   >
     <div className="pre-icon" aria-hidden>🔆</div>
     <p className="pre-title">Increase brightness &amp; volume</p>
@@ -371,7 +383,7 @@ return (
       <br />
       for the best experience.
     </p>
-    <p className="intro-hint">Tap anywhere to continue</p>
+    <p className="intro-hint" style={{ visibility: ready ? 'visible' : 'hidden' }}>Tap anywhere to continue</p>
   </div>
 );
 

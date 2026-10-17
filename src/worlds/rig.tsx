@@ -341,10 +341,12 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
     if (!bedP && !liveAct) {
       if (onProp) {
         const kn = g.pose === 'kneel';
-        tgt = { ...tgt, yaw: d * 0.3, hy: d * 0.5, sm: 0.75, bl: 0.45, eye: 0.9, ...(kn
+        const propBase: P = { yaw: d * 0.3, hy: d * 0.5, sm: 0.75, bl: 0.45, eye: 0.9 };
+        const propPose: P = (kn
           ? (i === 0 ? { lean: 0.07, hp: -0.22, hy: d * 0.45, sm: 0.85, nik: 1, nfc: 0.25, nic: 0.2, fS: -0.35, fE: -1.0 }
                      : { hp: 0.2, hy: d * 0.5, sm: 0.7, mo: 0.12, bl: 0.85, br: 0.5, eye: 0.85, nik: 1, nfc: 0.3, nic: 0.2, fS: -0.55, fE: -1.2 })
-          : { nik: 1, nfc: 0.5, nic: 0.45, hr: i === 1 ? -d * 0.08 : 0 }) };
+          : { nik: 1, nfc: 0.5, nic: 0.45, hr: i === 1 ? -d * 0.08 : 0 });
+        tgt = { ...tgt, ...propBase, ...propPose };
       }
       else if (standP || (wadeP && !onPool && !onBeach)) tgt = { ...tgt, ...(long ? { yaw: d * 0.22, roll: d * 0.07, hy: d * 0.3, hp: 0.02, hr: -d * 0.16, sm: 0.7, bl: 0.35, br: 0.1, nik: 1, fik: 1, nfc: 0.2, ffc: 0.15, nic: 0.1, fic: 0.15 } : { yaw: d * 0.15, hy: d * 0.3, sm: 0.7, nik: 0, fik: 1, ffc: 0.3 }), ...(wadeP ? { yaw: d * 0.5, hy: d * 0.5, nik: 0, fik: 0, nS: -0.5, nZ: -d * 0.1, nE: -0.3, fS: -0.15, fE: -0.2, sm: 0.9 } : {}) };
       else if ((onPool || onBeach) && (wadeP || swimP)) {

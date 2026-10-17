@@ -1,5 +1,5 @@
 import { useFrame } from '@react-three/fiber';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, type MutableRefObject } from 'react';
 import * as THREE from 'three';
 import { get, useGame } from '../state/store';
 import { fireworkSfx } from '../audio/proposalAudio';
@@ -135,7 +135,7 @@ function Crowd() {
       dp.position.set(p.x, GROUND + jump + sway, p.z); dp.rotation.set(0, p.ry + 0.05 * Math.sin(T * 0.6 + p.ph), 0); dp.scale.set(1, p.h, 1); dp.updateMatrix();
       body.current.setMatrixAt(k, dp.matrix); head.current.setMatrixAt(k, dp.matrix); hair.current.setMatrixAt(k, dp.matrix);
       const clap = Math.sin(T * 13 * p.sp + p.ph);
-      for (const [mesh, sd] of [[armL, 1], [armR, -1]] as [React.MutableRefObject<THREE.InstancedMesh>, number][]) {
+      for (const [mesh, sd] of [[armL, 1], [armR, -1]] as [MutableRefObject<THREE.InstancedMesh>, number][]) {
         da.position.set(sd * 0.21, 1.03, 0);
         da.rotation.set(-1.25 * k2 + 0.05 * Math.sin(T * 1.2 + p.ph), 0, sd * (0.08 + k2 * (0.1 - 0.28 * (0.5 + 0.5 * clap))));
         da.scale.set(1, 1, 1); da.updateMatrix(); m.multiplyMatrices(dp.matrix, da.matrix); mesh.current.setMatrixAt(k, m);

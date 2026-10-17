@@ -1,5 +1,6 @@
 import { get } from '../state/store';
 import { getAudioCtx } from './audio';
+import { setRainSound } from './ambient';
 
 /* ================= SECRET PROPOSAL WORLD: audio =================
  * Everything is synthesized (no files): a slow romantic piano + strings loop, a soft crowd murmur, cheers/claps and firework booms. */
@@ -128,4 +129,117 @@ export function fireworkSfx(delay = 0.2, vol = 1) {
   nburst(c, out, t, 0.35, 0.28 * vol, 260, 'lowpass', 0.5);
   for (let i = 0; i < 16; i++) nburst(c, out, t + 0.12 + Math.random() * 0.9, 0.04, 0.07 * vol, 3500 + Math.random() * 3000, 'highpass', 0.6);
 }
-export function endProposalAudio() { stopProposalMusic(); stopCrowd(); }
+
+/* ---------- wish fountain: music-box lullaby + water, plus a sound layer for each wish ---------- */
+const FBPM = 72, FBEAT = 60 / FBPM;
+const FCH = [
+  { bass: 36, arp: [60, 64, 67, 72], pad: [64, 67, 72] },   // C
+  { bass: 33, arp: [57, 60, 64, 69], pad: [60, 64, 69] },   // Am
+  { bass: 29, arp: [53, 57, 60, 65], pad: [57, 60, 65] },   // F
+  { bass: 31, arp: [55, 59, 62, 67], pad: [59, 62, 67] },   // G
+];
+const FMEL: [number, number, number][][] = [[[0, 84, 1], [1.5, 81, 0.5], [2, 79, 1], [3.5, 76, 0.5]], [], [[0, 81, 1], [1.5, 79, 0.5], [2, 77, 1], [3.5, 79, 0.5]], []];
+let fTimer: number | null = null, fMaster: GainNode | null = null, fBus: GainNode | null = null, fBar = 0, fNext = 0, layerTimer: number | null = null, layerStops: (() => void)[] = [], waterStop: (() => void) | null = null;
+function bell(c: AudioContext, out: AudioNode, t: number, midi: number, dur: number, vol: number) {
+  const f = mtof(midi), g = c.createGain();
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  for (const [mul, a] of [[1, 1], [2.76, 0.18], [5.4, 0.06]] as [number, number][]) { const o = c.createOscillator(), og = c.createGain(); o.type = 'sine'; o.frequency.value = f * mul; og.gain.value = a; o.connect(og).connect(g); o.start(t); o.stop(t + dur + 0.05); }
+  g.connect(out);
+}
+function scheduleFountainBar(c: AudioContext, bar: number, t: number) {
+  const b = FCH[bar % 4], out = fBus!;
+  piano(c, out, t, b.bass, FBEAT * 3.6, 0.13);
+  [0, 1, 2, 3, 2, 1, 2, 3].forEach((idx, k) => bell(c, out, t + (k * FBEAT) / 2, b.arp[idx] + 12, FBEAT * 1.4, 0.06));
+  b.pad.forEach(n => strings(c, out, t, n - 12, FBEAT * 4, 0.012));
+  if (bar >= 2) FMEL[bar % 4].forEach(([bt, n, d]) => bell(c, out, t + bt * FBEAT, n + 12, d * FBEAT + 0.6, 0.05));
+}
+export function startFountainAudio() {
+  if (fTimer !== null) return;
+  const c = getAudioCtx(), master = c.createGain();
+  master.gain.value = 0.0001; master.gain.linearRampToValueAtTime(get().soundOn ? 0.9 : 0.0001, c.currentTime + 2.5); master.connect(c.destination);
+  const hall = c.createConvolver(); hall.buffer = hallIR(c); const wet = c.createGain(); wet.gain.value = 0.5; hall.connect(wet).connect(master);
+  const dry = c.createGain(); dry.gain.value = 0.8; dry.connect(master);
+  const bus = c.createGain(); bus.connect(dry); bus.connect(hall); fBus = bus; fMaster = master;
+  fBar = 0; fNext = c.currentTime + 0.4;
+  const tick = () => { while (fNext < c.currentTime + 0.5) { if (get().soundOn) scheduleFountainBar(c, fBar, fNext); fBar++; fNext += FBEAT * 4; } };
+  tick(); fTimer = window.setInterval(tick, 120);
+  // gentle running water
+  if (get().soundOn) {
+    const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(), lfo = c.createOscillator(), lg = c.createGain();
+    src.buffer = noise(c); src.loop = true; f.type = 'bandpass'; f.frequency.value = 1500; f.Q.value = 0.6; g.gain.value = 0.03; lfo.frequency.value = 0.35; lg.gain.value = 0.01; lfo.connect(lg).connect(g.gain);
+    src.connect(f).connect(g).connect(c.destination); src.start(); lfo.start();
+    waterStop = () => { try { src.stop(); lfo.stop(); g.disconnect(); } catch { /* */ } };
+  }
+}
+function clearLayer() {
+  if (layerTimer !== null) { clearInterval(layerTimer); layerTimer = null; }
+  layerStops.forEach(fn => fn()); layerStops = [];
+}
+/** the sound that goes with the active wish ('' = none) */
+export function setFountainTheme(theme: string) {
+  clearLayer();
+  if (!theme || !get().soundOn || !fBus) return;
+  const c = getAudioCtx(), out = c.destination;
+  const loopNoise = (freq: number, q: number, vol: number, lfoHz: number) => {
+    const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(), lfo = c.createOscillator(), lg = c.createGain();
+    src.buffer = noise(c); src.loop = true; f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = q; g.gain.value = 0.0001; g.gain.linearRampToValueAtTime(vol, c.currentTime + 2);
+    lfo.frequency.value = lfoHz; lg.gain.value = vol * 0.5; lfo.connect(lg).connect(g.gain); src.connect(f).connect(g).connect(out); src.start(); lfo.start();
+    layerStops.push(() => { try { g.gain.cancelScheduledValues(c.currentTime); g.gain.setValueAtTime(g.gain.value, c.currentTime); g.gain.linearRampToValueAtTime(0.0001, c.currentTime + 0.6); setTimeout(() => { try { src.stop(); lfo.stop(); g.disconnect(); } catch { /* */ } }, 800); } catch { /* */ } });
+  };
+  if (theme === 'snow') loopNoise(420, 0.7, 0.06, 0.13);
+  else if (theme === 'castle' || theme === 'city' || theme === 'venice') {
+    // a 3/4 waltz: cheerful calliope for the kingdom, a softer accordion-ish one for the city
+    const castle = theme === 'castle', tune = castle ? [72, 76, 79, 76, 77, 81, 84, 81, 79, 77, 76, 74] : [69, 72, 76, 72, 74, 77, 81, 77, 72, 71, 69, 67];
+    let step = 0;
+    if (castle) loopNoise(700, 0.5, 0.025, 0.2);
+    if (theme === 'venice') loopNoise(750, 0.6, 0.035, 0.22);
+    layerTimer = window.setInterval(() => {
+      const t = c.currentTime + 0.05, b = step % 3, cb = Math.floor(step / 3);
+      const o = c.createOscillator(), g = c.createGain(), lp = c.createBiquadFilter(); o.type = castle ? 'square' : 'sawtooth'; lp.type = 'lowpass'; lp.frequency.value = castle ? 2400 : 1400;
+      const n = b === 0 ? tune[cb % tune.length] : tune[cb % tune.length] - 5; o.frequency.value = mtof(b === 0 ? n : n + 4);
+      g.gain.setValueAtTime(0.05, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3); o.connect(lp).connect(g).connect(out); o.start(t); o.stop(t + 0.35);
+      if (b === 0) { const bo = c.createOscillator(), bg = c.createGain(); bo.type = 'triangle'; bo.frequency.value = mtof(tune[cb % tune.length] - 24); bg.gain.setValueAtTime(0.08, t); bg.gain.exponentialRampToValueAtTime(0.0001, t + 0.4); bo.connect(bg).connect(out); bo.start(t); bo.stop(t + 0.45); }
+      step++;
+    }, castle ? 330 : 420);
+  } else if (theme === 'blossom') {
+    const sc = [69, 72, 74, 76, 79, 81];
+    layerTimer = window.setInterval(() => { if (Math.random() < 0.7) { const t = c.currentTime + 0.02; piano(c, out, t, sc[Math.floor(Math.random() * sc.length)] + 12, 1.4, 0.07); } }, 700);
+  } else if (theme === 'rainstreet') {
+    const sc = [57, 60, 62, 64, 67, 69];
+    setRainSound(true); layerStops.push(() => setRainSound(false));
+    layerTimer = window.setInterval(() => { if (Math.random() < 0.6) piano(c, out, c.currentTime + 0.02, sc[Math.floor(Math.random() * sc.length)] + 12, 2.2, 0.09); }, 1500);
+  } else if (theme === 'rainbow') {
+    loopNoise(900, 0.45, 0.07, 0.2);
+    layerTimer = window.setInterval(() => { if (Math.random() < 0.45) { const t = c.currentTime + 0.02, n = 96 + Math.floor(Math.random() * 6); bell(c, out, t, n, 0.5, 0.035); bell(c, out, t + 0.14, n + 4, 0.5, 0.03); } }, 1100);
+  } else if (theme === 'glowsea') {
+    const sc = [76, 79, 81, 84, 88];
+    loopNoise(650, 0.6, 0.055, 0.12);
+    layerTimer = window.setInterval(() => { if (Math.random() < 0.6) bell(c, out, c.currentTime + 0.02, sc[Math.floor(Math.random() * sc.length)], 2, 0.05); }, 800);
+  } else if (theme === 'forest') {
+    const sc = [72, 76, 79, 83, 84];
+    loopNoise(3600, 2.2, 0.014, 6);
+    layerTimer = window.setInterval(() => { if (Math.random() < 0.55) bell(c, out, c.currentTime + 0.02, sc[Math.floor(Math.random() * sc.length)] + 12, 1.8, 0.04); }, 900);
+  } else if (theme === 'balloons') {
+    loopNoise(520, 0.7, 0.04, 0.1);
+    const chords = [[65, 69, 72], [67, 71, 74], [64, 67, 72], [62, 65, 69]]; let ci = 0;
+    const padTick = () => { chords[ci++ % 4].forEach(n => strings(c, out, c.currentTime + 0.05, n, 5.5, 0.012)); };
+    padTick(); layerTimer = window.setInterval(padTick, 5000);
+  } else if (theme === 'galaxy') {
+    const sc = [88, 91, 93, 96, 100];
+    for (const f of [55, 82.4]) { const o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.value = f; g.gain.value = 0.0001; g.gain.linearRampToValueAtTime(0.05, c.currentTime + 3); o.connect(g).connect(out); o.start(); layerStops.push(() => { try { g.gain.setValueAtTime(g.gain.value, c.currentTime); g.gain.linearRampToValueAtTime(0.0001, c.currentTime + 0.8); setTimeout(() => { try { o.stop(); g.disconnect(); } catch { /* */ } }, 1000); } catch { /* */ } }); }
+    layerTimer = window.setInterval(() => { if (Math.random() < 0.7) bell(c, out, c.currentTime + 0.02, sc[Math.floor(Math.random() * sc.length)], 2.4, 0.04); }, 500);
+  } else if (theme === 'lanterns') {
+    const sc = [84, 88, 91, 93, 96];
+    loopNoise(300, 0.8, 0.03, 0.1);
+    layerTimer = window.setInterval(() => { if (Math.random() < 0.65) bell(c, out, c.currentTime + 0.02, sc[Math.floor(Math.random() * sc.length)], 2.2, 0.05); }, 600);
+  }
+}
+export function stopFountainAudio() {
+  clearLayer();
+  if (waterStop) { waterStop(); waterStop = null; }
+  if (fTimer === null) return;
+  clearInterval(fTimer); fTimer = null;
+  const m = fMaster, c = getAudioCtx(); fMaster = null; fBus = null;
+  if (m) { try { m.gain.setValueAtTime(m.gain.value, c.currentTime); m.gain.linearRampToValueAtTime(0.0001, c.currentTime + 1.6); } catch { /* */ } setTimeout(() => { try { m.disconnect(); } catch { /* */ } }, 2200); }
+}
+export function endProposalAudio() { stopProposalMusic(); stopCrowd(); stopFountainAudio(); }

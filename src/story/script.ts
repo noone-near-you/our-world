@@ -16,7 +16,7 @@ import type { Opt, Game } from '../state/store';
 export type Act = 'hug' | 'kiss' | 'tease' | 'slap' | 'flower' | 'feed' | 'hold';
 export type Step = string | { thought: string } | { act: Act } | { sfx: Sfx } | { gf: 'enter' } | { tod: 'morning' | 'afternoon' | 'evening' | 'night' } | { wait: number }
   | { lamp: boolean } | { pose: Game['pose'] } | { sleepy: number } | { skip: string; ms?: number; intimate?: boolean } | { scene: boolean }
-  | { dress: 'casual' | 'beach' | 'swim'; caption?: string; pose?: Game['pose'] } | { set: Partial<Game> } | { go: string } | { tone: 'soft' | 'tease' } | { ring: true };
+  | { dress: 'casual' | 'beach' | 'swim'; caption?: string; pose?: Game['pose'] } | { set: Partial<Game> } | { go: string } | { tone: 'soft' | 'tease' } | { ring: true } | { wishes: true };
 export interface Node { steps: Step[]; options?: Opt[]; then?: string; route?: (g: Game) => string | undefined }
 
 export const nodes: Record<string, Node> = {
@@ -1528,6 +1528,20 @@ nodes['prop_yes'] = { steps: [
   { wait: 9000 } ], then: 'prop_end' };
 nodes['prop_end'] = { steps: [ "Every star is jealous of us tonight.", "Ready to go home, my fiancée?" ], options: [
   { label: '“Take me home.”', world: 'bedroom' } ] };
+
+// ====================== SECRET: the wish fountain (started from engine.startFountain) ======================
+nodes['fountain_1'] = { steps: [
+  { pose: 'stand' }, { wait: 600 },
+  "Here we are… my little secret place.",
+  "They say if you throw a coin into this fountain and make a wish, it comes true.",
+  "I never believed that. Until I met you.",
+  "Whatever you wish for tonight… let’s see what happens.",
+  "Take my hand, my princess.",
+  { act: 'hold' },
+  { wishes: true },
+  "I hope every wish came true tonight.",
+  "Though honestly… you’re the biggest wish I ever made." ],
+  options: [ { label: '“Take me home.”', world: 'bedroom' } ] };
 export const exchanges: Record<Act, { pool: string[]; many: string }> = {
   feed: { pool: ['rf1', 'rf2'], many: 'rf_many' }, hold: { pool: ['rhd1', 'rhd2'], many: 'rhd_many' },
   kiss: { pool: ['rk1', 'rk2', 'rk3'], many: 'rk_many' }, hug: { pool: ['rh1', 'rh2', 'rh3'], many: 'rh_many' },

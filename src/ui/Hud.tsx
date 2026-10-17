@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { get, set, useGame, inFullscreen } from '../state/store';
-import { play, pick, rail, tap, toggleLamp, goWorld, syncRealTime, ringTap, startProposal } from '../story/engine';
+import { play, pick, rail, tap, toggleLamp, goWorld, syncRealTime, ringTap, startProposal, startFountain, chooseWish, coinTapped } from '../story/engine';
 import type { Act } from '../story/script';
 import { unlockAudio, blip, sfx } from '../audio/audio';
 import { setMusicMuted, chooseSong, isMusicMuted, playSoftMusic, getSongsFor, getSongName, stopMusic } from '../audio/music';
@@ -219,6 +219,39 @@ function FlowerConfetti() {
     return () => clearInterval(iv);
   }, [c]);
   return null;
+}
+
+/** secret wish fountain: wish menu (cards + her own typed wish), coin prompt and the magic flash */
+const WISH_CARDS: [string, string, string][] = [['castle', '🏰', 'Fairytale kingdom'], ['snow', '❄️', 'Snowy night'], ['blossom', '🌸', 'Cherry blossoms'], ['city', '🗼', 'City of lights'], ['lanterns', '🏮', 'Sky of lanterns'], ['glowsea', '🌊', 'Glowing sea'], ['forest', '🍄', 'Enchanted forest'], ['balloons', '🎈', 'Sunrise balloons'], ['galaxy', '🌌', 'Among the stars'], ['rainstreet', '☔', 'Rainy street'], ['venice', '🛶', 'Canals & gondola'], ['rainbow', '🌈', 'Rainbow falls']];
+function WishPicker() {
+  const ui = useGame(g => g.wishUi), wish = useGame(g => g.wish);
+  if (ui !== 'pick') return null;
+  return (<>
+    <button className="wish-quit" aria-label="Leave the fountain" title="Leave" onClick={() => { blip(420); chooseWish('@done'); }}>
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9" /></svg>
+    </button>
+    <div className="wishov">
+      <p className="wish-title">Make a wish ✨</p>
+      <div className="wish-cards">
+        {WISH_CARDS.map(([k, e, l]) => <button key={k} className={`wish-card${wish === k ? ' on' : ''}`} onClick={() => { blip(620); chooseWish(k); }}><span>{e}</span><em>{l}</em></button>)}
+      </div>
+    </div>
+  </>);
+}
+function CoinPrompt() {
+  const ui = useGame(g => g.wishUi), label = useGame(g => g.wishLabel);
+  if (ui !== 'coin') return null;
+  return (
+    <div className="coinov" onClick={() => { blip(700); coinTapped(); }} role="button" aria-label="Throw the coin">
+      <p className="coin-wish">“{label}”</p>
+      <div className="coin"><span>★</span></div>
+      <p className="rb-hint">Tap the coin to make your wish</p>
+    </div>
+  );
+}
+function WishFlash() {
+  const f = useGame(g => g.flash);
+  return f ? <div key={f} className="wishflash" /> : null;
 }
 
 const ACTS: [Act, string][] = [['hug', 'Hug'], ['kiss', 'Kiss'], ['tease', 'Tease'], ['slap', 'Slap'], ['hold', 'Hold hands'], ['feed', 'Feed']];
@@ -637,14 +670,15 @@ export function Hud() {
   const actsLocked = busy || !gfSeated || (pose !== 'sit' && pose !== 'bed') || scene;
   const lampLocked = scene; // only during blackout / transition
   const showUi = started && intro === 'done' && !title;
-  const secret = world === 'proposal';
+  const secret = world === 'proposal' || world === 'fountain';
   useEffect(() => { document.body.classList.toggle('secret', secret); return () => document.body.classList.remove('secret'); }, [secret]);
   // preview link for testing only (not shown anywhere): open the game with ?proposal added to the address
   useEffect(() => { if (showUi && /[?&]proposal\b/.test(window.location.search)) startProposal(); }, [showUi]);
+  useEffect(() => { if (showUi && /[?&]fountain\b/.test(window.location.search)) startFountain(); }, [showUi]);
 
   return (<>
     <ExitGuard />
-    <RingBox /><FlowerConfetti />
+    <RingBox /><FlowerConfetti /><WishPicker /><CoinPrompt /><WishFlash />
     {intro !== 'done' && <Intro />}
     <div className="fade" style={{ opacity: fade }} onClick={() => { if (fade > 0.5) set({ fade: 0 }); }} />
     {caption && <div className="caption" key={caption}><p>{caption}</p></div>}

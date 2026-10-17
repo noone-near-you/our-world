@@ -337,7 +337,7 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
     const g = get(), bedP = g.pose === 'bed';   // lying in bed: on their sides under the blanket, facing us, heads on the pillows
     let tgt: P = bedP ? { ...b0, yaw: 0, hy: 0, hp: 0.08, hr: -0.75, x: 0, nS: -0.1, nE: -0.45, fS: -0.1, fE: -0.45, sm: 0.55, bl: 0.5 } : c.act && t >= 0 && t < ACTS[c.act].dur ? sample(ACTS[c.act].rows, t, i, b0) : b0;
     const standP = g.pose === 'stand', wadeP = g.pose === 'wade', swimP = g.pose === 'swim', restP = g.pose === 'rest', onBeach = g.world === 'beach', onPool = g.world === 'pool', onLounger = onBeach || onPool, liveAct = !!c.act && t >= 0 && t < ACTS[c.act].dur;
-    const onProp = g.world === 'proposal', kneelHim = onProp && g.pose === 'kneel' && i === 0;   // secret proposal world
+    const onFountain = g.world === 'fountain', onProp = g.world === 'proposal' || onFountain, kneelHim = g.world === 'proposal' && g.pose === 'kneel' && i === 0;   // secret worlds: proposal stage / wish fountain
     if (!bedP && !liveAct) {
       if (onProp) {
         const kn = g.pose === 'kneel';
@@ -382,8 +382,8 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
       } else if (g.world === 'shower') {
         // approach from outside the open front of the stall
         rp.set(i === 0 ? -0.5 : 0.5, 0, 2.4); w.sink = 0; w.s = 1; w.stage = 2;
-      } else if (g.world === 'proposal') {
-        rp.set(i === 0 ? -4.8 : 4.8, 0, -1.2); w.sink = 0; w.s = 1; w.stage = 2;   // they walk onto the stage from either side
+      } else if (g.world === 'proposal' || g.world === 'fountain') {
+        rp.set(i === 0 ? -4.8 : 4.8, 0, g.world === 'fountain' ? 0.6 : -1.2); w.sink = 0; w.s = 1; w.stage = 2;   // they walk onto the stage from either side
       } else if (g.world === 'pool') {
         const sideX = i === 0 ? -5.2 : 5.2;
         rp.set(sideX, 0, 0.8); w.sink = 0; w.s = 1; w.stage = 2;
@@ -403,7 +403,7 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
     // beach shoreline is diagonal through (0,-3.5). Depth needs z past the local shore line.
     // wade ≈ knee depth, swim ≈ waist depth.
     const SPOT: Record<string, [number, number][]> = onProp
-      ? { stand: [[-0.4, -1.2], [0.4, -1.2]], kneel: [[-0.72, -1.2], [0.32, -1.2]], sit: [[-0.44, -1.2], [0.44, -1.2]] }
+      ? (onFountain ? { stand: [[-0.4, 0.6], [0.4, 0.6]], kneel: [[-0.4, 0.6], [0.4, 0.6]], sit: [[-0.4, 0.6], [0.4, 0.6]] } : { stand: [[-0.4, -1.2], [0.4, -1.2]], kneel: [[-0.72, -1.2], [0.32, -1.2]], sit: [[-0.44, -1.2], [0.44, -1.2]] })
       : onShower
       ? {
           stand: [[-0.45, 1.15], [0.4, 1.15]],
@@ -591,11 +591,11 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
     const o2 = PT[1 - i]!, mine = PT[i]!, act = c.act, live = !!act && t >= 0 && t < ACTS[act].dur;
     const sN = N.armN.getWorldPosition(v1).clone(), bkA = o2.bk[0].getWorldPosition(v2).clone(), bkB = o2.bk[1].getWorldPosition(v3).clone();
     const near = sN.distanceTo(bkA) < sN.distanceTo(bkB), back = (isN: boolean) => (isN === near ? bkA : bkB);
-    const holdMode = (live && act === 'hold') || (!live && g.world === 'proposal' && g.pose === 'stand');
+    const holdMode = (live && act === 'hold') || (!live && onProp && g.pose === 'stand');
     const holdMid = mine.torso.getWorldPosition(new THREE.Vector3()).add(o2.torso.getWorldPosition(new THREE.Vector3())).multiplyScalar(0.5).add(new THREE.Vector3(0, 0.15, 0.12));
     const useN = sN.distanceTo(holdMid) <= N.armF.getWorldPosition(new THREE.Vector3()).distanceTo(holdMid);
     const target = (isN: boolean): THREE.Vector3 | null => { const g = (n: THREE.Object3D) => n.getWorldPosition(new THREE.Vector3());
-      if (!live && get().world === 'proposal') {   // kneeling: he holds the ring box out in front of him, she lifts a hand to her lips
+      if (!live && (get().world === 'proposal' || get().world === 'fountain')) {   // kneeling: he holds the ring box out in front of him, she lifts a hand to her lips
         if (get().pose !== 'kneel') return isN === useN ? holdMid : null;   // standing together: their hands meet halfway
         if (i === 0) return isN ? torso.localToWorld(new THREE.Vector3(d * 0.14, 0.34, 0.4)) : null;
         return isN ? g(mine.lip).add(new THREE.Vector3(0, -0.02, 0.06)) : null;
@@ -742,7 +742,7 @@ export function Person({ i, ctl, x, skin, hair: hc, top: topIn, pants: pantsIn, 
             <TE p={[0, -0.69, 0.07]} s={[0.075, 0.055, 0.14]} c={naked || swim ? skin : wed ? (long ? '#f7f1e8' : '#121216') : beach ? '#d9b27a' : '#fbf8f4'} o={0.006} />{!swim && !naked && (() => {
             // slippers / sandals / shoes by world
             const isBeach = world === 'beach' || outfit === 'beach';
-            const isGarden = world === 'garden';
+            const isGarden = world === 'garden' || world === 'fountain';
             const isKitchen = world === 'kitchen';
             const isShower = world === 'shower';
             if (wed) return <TE p={[0, -0.72, 0.07]} s={[0.078, 0.025, 0.142]} c={long ? '#f1e8da' : '#0b0b0e'} />;   // polished shoes / white heels

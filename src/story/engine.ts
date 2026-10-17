@@ -1,11 +1,11 @@
-import { get, set, type Opt } from '../state/store';
+import { get, set, type Opt, type Game } from '../state/store';
 import { nodes, exchanges, lampPool, type Act } from './script';
 import { sfx, setSfxMuted, startMoanLoop, stopMoanLoop } from '../audio/audio';
 import { playSoftMusic, onWorldChange, onSongUserPicked, getSongName } from '../audio/music';
 import { setAmbientWorld, startAmbientIfNeeded, setShowerWater, setIntimateAudio, stopAllAmbient } from '../audio/ambient';
 import { pauseMusic, resumeMusic } from '../audio/music';
 import { BODY, FX } from '../worlds/anchors';
-import { startProposalMusic, startCrowd, crowdCheer, crowdAww, fireworkSfx, endProposalAudio } from '../audio/proposalAudio';
+import { startProposalMusic, startCrowd, crowdCheer, crowdAww, fireworkSfx, endProposalAudio, startFountainAudio, setFountainTheme } from '../audio/proposalAudio';
 export { startAmbientIfNeeded };
 const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
 let runAct: (a: Act) => Promise<void> = async () => {};
@@ -43,7 +43,7 @@ export function hourToTod(h: number): 'morning' | 'afternoon' | 'evening' | 'nig
   return 'night';
 }
 export function syncRealTime() {
-  if (get().world === 'proposal') return 'night';   // the secret world is always night
+  if (get().world === 'proposal' || get().world === 'fountain') return 'night';   // the secret worlds are always night
   const tod = hourToTod(new Date().getHours());
   if (get().tod !== tod) set({ tod });
   return tod;
@@ -101,6 +101,7 @@ export async function play(id: string): Promise<void> {
       if (s.act === 'flower') set({ flowerInHair: true });
       set({ busy: false });
     }
+    else if ('wishes' in s) { await fountainWishes(my); if (my !== token) return; }
     else if ('ring' in s) {
       set({ line: '', options: [], ringBox: 'closed' });
       await new Promise<void>(r => { ringRes = r; });
@@ -125,7 +126,7 @@ export async function play(id: string): Promise<void> {
       // beach / pool / shower walks are longer (around obstacles, into water)
       const longWalk = ['wade', 'swim', 'rest'].includes(s.pose)
         || (s.pose === 'sit' && (w === 'beach' || w === 'pool'))
-        || (s.pose === 'stand' && (w === 'beach' || w === 'shower' || w === 'pool' || w === 'proposal'));
+        || (s.pose === 'stand' && (w === 'beach' || w === 'shower' || w === 'pool' || w === 'proposal' || w === 'fountain'));
       set({ line: '', pose: s.pose });
       await sleep(s.pose === 'bed' ? 2800 : longWalk ? 4200 : 2400);
     }
@@ -239,11 +240,11 @@ const WORLD_REPLAY: Record<string, string> = {
   shower: 'sh_replay',
 };
 function leaveProposal() {
-  endProposalAudio(); set({ fireworks: false, ringBox: '', ringOpen: false });
+  endProposalAudio(); set({ fireworks: false, ringBox: '', ringOpen: false, wish: '', wishUi: '' });
   resumeMusic();
 }
 export async function goWorld(id: string, _opts?: { silent?: boolean }) {
-  if (get().world === 'proposal' && id !== 'proposal') leaveProposal();
+  if ((get().world === 'proposal' || get().world === 'fountain') && id !== get().world) leaveProposal();
     // same world (not bedroom) → again + replay instead of re-arriving
   if (get().world === id && id !== 'bedroom' && WORLD_REPLAY[id] && get().gfHere) {
     token++; release?.();
@@ -300,7 +301,10 @@ export async function goWorld(id: string, _opts?: { silent?: boolean }) {
   }
 }
 // ---- the secret proposal world: never listed anywhere. Opens after the hidden sequence  hold hands → hug → kiss → hold hands  (each within 2 min). ----
-const SECRET_SEQ: Act[] = ['hold', 'hug', 'kiss', 'hold'];
+const SECRETS: { seq: Act[]; start: () => void }[] = [
+  { seq: ['hold', 'hug', 'kiss', 'hold'], start: () => { startProposal(); } },   // the proposal
+  { seq: ['kiss', 'tease', 'hug', 'hold'], start: () => { startFountain(); } },   // the wish fountain
+];
 let seq: Act[] = [], seqAt = 0;
 export async function startProposal() {
   if (get().world === 'proposal') return;
@@ -308,14 +312,101 @@ export async function startProposal() {
   set({ options: [], line: '', busy: true, fade: 1 });
   await sleep(900);
   pauseMusic(); stopAllAmbient(); setSfxMuted(false);
+  startProposalMusic();   // the romantic music begins under the black screen
+  set({ caption: 'Let’s enter our marriage ceremony, my princess' });
+  await sleep(4800);
+  set({ caption: '' });
+  await sleep(700);
   set({ world: 'proposal', tod: 'night', outfit: 'wedding', pose: 'stand', naked: false, steam: false, showerOn: false, disco: false, rain: false, tint: '', lamp: true,
     gfHere: true, gfSeated: true, ringBox: '', ringOpen: false, fireworks: false, scene: false, caption: '', clothSeed: Math.floor(Math.random() * 1e9) });
   setShowerWater(false);
-  startProposalMusic(); startCrowd();
+  startCrowd();
   await sleep(900);
   set({ fade: 0, busy: false });
   await sleep(800);
   play('prop_1');
+}
+
+// ---- the secret wish fountain ----
+let wishRes: ((v: string) => void) | null = null, coinRes: (() => void) | null = null;
+/** the wish menu: she picked a wish card, typed her own, or finished ('@done') */
+export function chooseWish(v: string) { wishRes?.(v); }
+/** she tapped the coin to throw it into the fountain */
+export function coinTapped() { coinRes?.(); }
+const WISHES: Record<string, { label: string; lines: string[] }> = {
+  castle: { label: 'Take us to a fairytale kingdom', lines: ['Wait… is that a castle?! And a ferris wheel… a carousel…', 'This is your fairytale, my princess. Look up — those fireworks are for you.'] },
+  snow: { label: 'A snowy winter night', lines: ['It’s snowing… I can almost feel the cold.', 'Come here. I’ll keep you warm — that’s my job.'] },
+  blossom: { label: 'Cherry blossoms in bloom', lines: ['Cherry blossoms… look how they’re falling around you.', 'I think spring just fell in love with you too.'] },
+  city: { label: 'A city of lights', lines: ['A whole city of lights… just for us.', 'Dinner at midnight, a walk under that tower… you wished it, so it’s ours.'] },
+  lanterns: { label: 'A sky full of lanterns', lines: ['Look at the sky… hundreds of lanterns, all carrying wishes.', 'Mine already came true — she’s standing right next to me.'] },
+  glowsea: { label: 'A glowing sea at night', lines: ['The waves are glowing… like the sea is full of tiny stars.', 'See how the water lights up when it moves? Just like your eyes do.'] },
+  forest: { label: 'An enchanted glowing forest', lines: ['The whole forest is glowing… every tree, every flower.', 'It feels like we walked into a dream — and you fit right in.'] },
+  balloons: { label: 'Hot-air balloons at sunrise', lines: ['Hot-air balloons at sunrise… look at that golden sky.', 'One day let’s fly in one. Just you, me, and all that light.'] },
+  rainstreet: { label: 'A rainy night, one umbrella', lines: ['It’s pouring… and I couldn’t be happier. Come under here.', 'One umbrella, two people, and the whole sleepy city to ourselves.'] },
+  venice: { label: 'Canals and a gondola ride', lines: ['Canals, lanterns, a little gondola… it’s like another century.', 'A boat ride for two? I’ll even pretend I can sing.'] },
+  rainbow: { label: 'A rainbow waterfall', lines: ['A waterfall… and a rainbow right behind it. Look at all those colours.', 'I’d climb any mountain just to see this with you.'] },
+  galaxy: { label: 'Dancing among the stars', lines: ['We’re standing among the stars…', 'Planets, galaxies, all of it — and nothing shines like you.'] },
+};
+const WISH_KEYS: [string, RegExp][] = [
+  ['castle', /disney|castle|princess|park|fairy|kingdom|ferris|carousel|roller|magic|fantasy|prince|amusement|fair\b/i],
+  ['snow', /snow|winter|cold|ice|frozen|shimla|manali|kashmir|christmas|aurora|north|mountain/i],
+  ['blossom', /sakura|cherry|blossom|japan|spring|flower|petal|pink|garden/i],
+  ['city', /paris|eiffel|city|france|europe|london|lights|dinner|romantic|date|tower|night out|new york|dubai/i],
+  ['rainbow', /rainbow|waterfall|butterfl|meadow|colou?r|falls\b/i],
+  ['rainstreet', /\brain\b|umbrella|monsoon|drizzle|storm|puddle/i],
+  ['venice', /venice|canal|gondola|boat|italy|river|bridge|cruise/i],
+  ['glowsea', /glow|bioluminescent|sea\b|ocean|beach|wave|water|island|maldives|goa|shore/i],
+  ['forest', /forest|jungle|enchant|mushroom|woods|elf|elves|nature|tree|avatar|pandora/i],
+  ['balloons', /balloon|hot air|sunrise|dawn|morning|sunset|golden|cappadocia|fly|paraglid/i],
+  ['galaxy', /galaxy|space|planet|universe|cosmos|moon|astronaut|milky|star|nebula|dance/i],
+  ['lanterns', /lantern|sky|diwali|lamp|float|candle|festival/i],
+];
+function resolveWish(v: string): { theme: string; exact: boolean } {
+  if (WISHES[v]) return { theme: v, exact: true };
+  for (const [k, re] of WISH_KEYS) if (re.test(v)) return { theme: k, exact: true };
+  const keys = Object.keys(WISHES); return { theme: keys[Math.floor(Math.random() * keys.length)], exact: false };
+}
+async function fountainWishes(my: number) {
+  for (;;) {
+    set({ line: '', options: [], wishUi: 'pick' });
+    const choice = await new Promise<string>(r => { wishRes = r; });
+    wishRes = null; set({ wishUi: '' });
+    if (my !== token || choice === '@done') { set({ wishUi: '' }); return; }
+    const { theme, exact } = resolveWish(choice);
+    set({ wishLabel: WISHES[choice] ? WISHES[choice].label : choice, wishUi: 'coin' });
+    await new Promise<void>(r => { coinRes = r; });
+    coinRes = null; set({ wishUi: '', coinAt: Date.now() });
+    try { sfx('splash'); } catch { /* */ }
+    await sleep(1500);   // the coin flies and lands in the water
+    if (my !== token) return;
+    set({ flash: Date.now(), wishFx: Date.now() }); try { sfx('chime'); } catch { /* */ }
+    await sleep(450);
+    set({ wish: theme as Game['wish'] }); setFountainTheme(theme);
+    if (theme === 'castle') { try { sfx('giggle'); } catch { /* */ } }
+    await sleep(3200);   // let her take it all in
+    const lines = exact ? WISHES[theme].lines : ['…The fountain didn’t quite understand that one, so it gave you its closest wish.', ...WISHES[theme].lines];
+    for (const l of lines) { set({ line: l, kind: 'say', lineKey: get().lineKey + 1 }); await waitTap(); if (my !== token) return; }
+    set({ line: '' });
+  }
+}
+export async function startFountain() {
+  if (get().world === 'fountain') return;
+  token++; release?.(); sideOn = false; sideRel = null; wishRes = null; coinRes = null;
+  set({ options: [], line: '', busy: true, fade: 1 });
+  await sleep(900);
+  pauseMusic(); stopAllAmbient(); setSfxMuted(false);
+  startFountainAudio();
+  set({ caption: 'Come with me… I know a place where wishes come true' });
+  await sleep(4400);
+  set({ caption: '' });
+  await sleep(600);
+  set({ world: 'fountain', tod: 'night', outfit: 'casual', pose: 'stand', naked: false, steam: false, showerOn: false, disco: false, rain: false, tint: '', lamp: true,
+    gfHere: true, gfSeated: true, wish: '', wishUi: '', ringBox: '', ringOpen: false, fireworks: false, scene: false, caption: '', clothSeed: Math.floor(Math.random() * 1e9) });
+  setShowerWater(false);
+  await sleep(900);
+  set({ fade: 0, busy: false });
+  await sleep(800);
+  play('fountain_1');
 }
 // ---- side exchanges: he reacts, she answers, he replies, then the story resumes exactly where it was ----
 let sideOn = false, keep: { options: Opt[]; line: string; kind: 'say' | 'thought' } = { options: [], line: '', kind: 'say' };
@@ -388,8 +479,9 @@ export async function rail(a: Act) {
   keep = { options: g.options, line: g.line, kind: g.kind }; sideOn = true; set({ busy: true, options: [], line: '' });
   await runAct(a);  // sfx from ACTS.ev at contact time
   const now = Date.now(); if (now - seqAt > 120000) seq = [];
-  seqAt = now; seq = [...seq, a].slice(-SECRET_SEQ.length);
-  if (seq.length === SECRET_SEQ.length && seq.every((v, k) => v === SECRET_SEQ[k]) && get().world !== 'proposal') { seq = []; sideOn = false; sideRel = null; set({ busy: false }); startProposal(); return; }
+  seqAt = now; seq = [...seq, a].slice(-4);
+  const hit = SECRETS.find(x => seq.length === x.seq.length && seq.every((v, k) => v === x.seq[k]));
+  if (hit && get().world !== 'proposal' && get().world !== 'fountain') { seq = []; sideOn = false; sideRel = null; set({ busy: false }); hit.start(); return; }
   const c = ++counts[a], ex = exchanges[a], id = c >= 4 && c % 2 === 0 ? ex.many : ex.pool[(c - 1) % ex.pool.length];
   side(id);
 }

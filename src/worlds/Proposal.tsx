@@ -12,7 +12,7 @@ const pickOf = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
 const GROUND = -0.55, SZ = -1.2;
 const FLOWER_COLS = ['#ffffff', '#ffd6e4', '#ff9fbb', '#fff0c8', '#f6c8ff', '#ffb8a8'];
 
-function Mountains() {
+export function Mountains() {
   const mts = useMemo(() => ([[-70, -64, 26, 30], [-38, -74, 30, 38], [0, -84, 38, 46], [42, -72, 30, 36], [76, -64, 26, 28], [-112, -86, 34, 32], [112, -86, 34, 34]] as number[][]).map(([x, z, r, h]) => {
     const g = new THREE.ConeGeometry(r, h, 8, 4), p = g.attributes.position, col = new Float32Array(p.count * 3), c = new THREE.Color();
     for (let k = 0; k < p.count; k++) {
@@ -27,16 +27,20 @@ function Mountains() {
   return <>{mts.map((m, k) => <mesh key={k} geometry={m.g} position={[m.x, m.h / 2 + GROUND - 1, m.z]}><meshStandardMaterial vertexColors flatShading roughness={1} /></mesh>)}</>;
 }
 
-function Sky() {
+/** 1 = full night sky, 0 = no stars/moon (e.g. a sunrise wish) */
+export const skyK = { v: 1 };
+export function Sky() {
   const stars = useMemo(() => { const a = new Float32Array(900 * 3); for (let k = 0; k < 900; k++) { const th = Math.random() * Math.PI * 2, u = rnd(0.1, 1), r = 110, s = Math.sqrt(1 - u * u); a[k * 3] = Math.cos(th) * s * r; a[k * 3 + 1] = u * r; a[k * 3 + 2] = Math.sin(th) * s * r - 20; } return a; }, []);
   const lights = useMemo(() => { const a = new Float32Array(70 * 3); for (let k = 0; k < 70; k++) { a[k * 3] = rnd(-70, 70); a[k * 3 + 1] = rnd(-0.3, 2.2); a[k * 3 + 2] = rnd(-58, -44); } return a; }, []);
-  const tw = useRef<THREE.PointsMaterial>(null!);
-  useFrame(({ clock }) => { if (tw.current) tw.current.opacity = 0.8 + 0.15 * Math.sin(clock.elapsedTime * 1.3); });
+  const tw = useRef<THREE.PointsMaterial>(null!), vil = useRef<THREE.PointsMaterial>(null!), moon = useRef<THREE.Group>(null!);
+  useFrame(({ clock }) => { const k = skyK.v; if (tw.current) tw.current.opacity = (0.8 + 0.15 * Math.sin(clock.elapsedTime * 1.3)) * k; if (vil.current) vil.current.opacity = 0.9 * k; if (moon.current) moon.current.visible = k > 0.35; });
   return (<>
     <points frustumCulled={false}><bufferGeometry><bufferAttribute attach="attributes-position" count={900} array={stars} itemSize={3} /></bufferGeometry><pointsMaterial ref={tw} size={1.7} sizeAttenuation={false} color="#ffffff" transparent opacity={0.85} depthWrite={false} fog={false} /></points>
-    <points frustumCulled={false}><bufferGeometry><bufferAttribute attach="attributes-position" count={70} array={lights} itemSize={3} /></bufferGeometry><pointsMaterial size={3} sizeAttenuation={false} color="#ffd890" transparent opacity={0.9} depthWrite={false} fog={false} /></points>
-    <mesh position={[-30, 34, -92]}><sphereGeometry args={[4.2, 24, 18]} /><meshBasicMaterial color="#f7f3e2" fog={false} /></mesh>
-    <mesh position={[-30, 34, -92]}><sphereGeometry args={[9, 24, 18]} /><meshBasicMaterial color="#9fb2ff" transparent opacity={0.12} depthWrite={false} fog={false} blending={THREE.AdditiveBlending} /></mesh>
+    <points frustumCulled={false}><bufferGeometry><bufferAttribute attach="attributes-position" count={70} array={lights} itemSize={3} /></bufferGeometry><pointsMaterial ref={vil} size={3} sizeAttenuation={false} color="#ffd890" transparent opacity={0.9} depthWrite={false} fog={false} /></points>
+    <group ref={moon}>
+      <mesh position={[-30, 34, -92]}><sphereGeometry args={[4.2, 24, 18]} /><meshBasicMaterial color="#f7f3e2" fog={false} /></mesh>
+      <mesh position={[-30, 34, -92]}><sphereGeometry args={[9, 24, 18]} /><meshBasicMaterial color="#9fb2ff" transparent opacity={0.12} depthWrite={false} fog={false} blending={THREE.AdditiveBlending} /></mesh>
+    </group>
   </>);
 }
 
@@ -156,8 +160,9 @@ function Crowd() {
 /* ---------- fireworks ---------- */
 const MAXP = 2600;
 const PALS = [['#ffd36b', '#fff2c0'], ['#ff7fb5', '#ffd0e4'], ['#ffffff', '#cfe8ff'], ['#7fc8ff', '#d8f0ff'], ['#b48cff', '#ecdcff'], ['#ff6a6a', '#ffd0c0'], ['#7dffb0', '#e0ffe8']];
-function Fireworks() {
-  const on = useGame(g => g.fireworks);
+export function Fireworks({ activeRef, spread = 13, zr = [-27, -19], hr = [8.5, 13] }: { activeRef?: MutableRefObject<boolean>; spread?: number; zr?: [number, number]; hr?: [number, number] }) {
+  const stOn = useGame(g => g.fireworks);
+  const stRef = useRef(stOn); stRef.current = stOn;
   const pts = useRef<THREE.Points>(null!);
   const S = useMemo(() => ({ pos: new Float32Array(MAXP * 3).fill(-999), col: new Float32Array(MAXP * 3), vel: new Float32Array(MAXP * 3), life: new Float32Array(MAXP), max: new Float32Array(MAXP), base: new Float32Array(MAXP * 3), drag: new Float32Array(MAXP), grav: new Float32Array(MAXP), ph: new Float32Array(MAXP), next: 0, tNext: 0, rockets: [] as { x: number; y: number; z: number; vy: number; ty: number; vx: number }[] }), []);
   const tex = useMemo(() => { const cv = document.createElement('canvas'); cv.width = cv.height = 64; const x = cv.getContext('2d')!, g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.25, 'rgba(255,255,255,.85)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(cv); }, []);
@@ -183,13 +188,13 @@ function Fireworks() {
   useEffect(() => {
     const g = pts.current.geometry; g.setAttribute('position', new THREE.BufferAttribute(S.pos, 3).setUsage(THREE.DynamicDrawUsage)); g.setAttribute('color', new THREE.BufferAttribute(S.col, 3).setUsage(THREE.DynamicDrawUsage));
   }, [S]);
-  useEffect(() => { if (on) S.tNext = 0; }, [on, S]);
   useFrame(({ clock }, dt) => {
     if (!pts.current) return;
     dt = Math.min(dt, 0.05); const T = clock.elapsedTime;
+    const on = activeRef ? activeRef.current : stRef.current;
     if (on && T > S.tNext) {   // launch 1–2 rockets
       const n = Math.random() < 0.35 ? 2 : 1;
-      for (let i = 0; i < n; i++) S.rockets.push({ x: rnd(-13, 13), y: GROUND, z: rnd(-27, -19), vy: rnd(15, 19), ty: rnd(8.5, 13), vx: rnd(-0.8, 0.8) });
+      for (let i = 0; i < n; i++) S.rockets.push({ x: rnd(-spread, spread), y: GROUND, z: rnd(zr[0], zr[1]), vy: rnd(15, 19), ty: rnd(hr[0], hr[1]), vx: rnd(-0.8, 0.8) });
       S.tNext = T + rnd(0.5, 1.2);
     }
     for (let k = S.rockets.length - 1; k >= 0; k--) {

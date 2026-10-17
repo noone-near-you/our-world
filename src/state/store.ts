@@ -19,6 +19,12 @@ export interface Game {
   naked: boolean;               // clothes off in shower (steam covers body)
   splash: boolean;              // trigger beach splash particles once
   disco: boolean;               // pool: disco lights on
+  wish: '' | 'castle' | 'snow' | 'blossom' | 'city' | 'lanterns' | 'glowsea' | 'forest' | 'balloons' | 'galaxy' | 'rainstreet' | 'venice' | 'rainbow';   // secret wish fountain: which wish is currently shown
+  wishUi: '' | 'pick' | 'coin';      // secret wish fountain: wish menu / coin prompt on screen
+  wishLabel: string;                 // text of the wish being made (shown on the coin prompt)
+  coinAt: number;                    // Date.now() when the coin was thrown
+  wishFx: number;                    // Date.now() of the last wish transformation (sparkle burst)
+  flash: number;                     // Date.now() of the last full-screen magic flash
   ringBox: '' | 'closed' | 'open';   // secret proposal: the ring-box overlay (closed = waiting for her tap)
   ringOpen: boolean;            // secret proposal: the ring box in his hand is open
   fireworks: boolean;           // secret proposal: fireworks in the night sky
@@ -52,7 +58,7 @@ export const inFullscreen = () => {
   const touch = matchMedia('(pointer: coarse)').matches;
   return !touch && innerWidth === screen.width && innerHeight === screen.height;
 };
-let s: Game = { started: false, soundOn: false, title: '', line: '', kind: 'say', lineKey: 0, options: [], busy: false, tod: 'afternoon', gfHere: false, gfSeated: false, world: 'bedroom', fade: 0, lamp: true, pose: 'sit', sleepy: 0, scene: false, caption: '', outfit: 'casual', tone: 'soft', beachDone: false, steam: false, flowerInHair: false, showerOn: false, naked: false, splash: false, disco: false, ringBox: '', ringOpen: false, fireworks: false, confetti: 0, cheer: 0, rain: false, look: 'real', tint: '', bubbles: 0, ball: 0, petals: 0, clothSeed: Math.floor(Math.random() * 1e9), musicMuted: false, musicWanted: false, musicSlot: 0, musicWorld: 'bedroom', musicSlotByWorld: {}, musicPlaying: false, intro: inFullscreen() ? 'earphone' : 'start', paused: false, openSongPanel: false };
+let s: Game = { started: false, soundOn: false, title: '', line: '', kind: 'say', lineKey: 0, options: [], busy: false, tod: 'afternoon', gfHere: false, gfSeated: false, world: 'bedroom', fade: 0, lamp: true, pose: 'sit', sleepy: 0, scene: false, caption: '', outfit: 'casual', tone: 'soft', beachDone: false, steam: false, flowerInHair: false, showerOn: false, naked: false, splash: false, disco: false, wish: '', wishUi: '', wishLabel: '', coinAt: 0, wishFx: 0, flash: 0, ringBox: '', ringOpen: false, fireworks: false, confetti: 0, cheer: 0, rain: false, look: 'real', tint: '', bubbles: 0, ball: 0, petals: 0, clothSeed: Math.floor(Math.random() * 1e9), musicMuted: false, musicWanted: false, musicSlot: 0, musicWorld: 'bedroom', musicSlotByWorld: {}, musicPlaying: false, intro: inFullscreen() ? 'earphone' : 'start', paused: false, openSongPanel: false };
 const subs = new Set<() => void>();
 export const get = () => s;
 export const set = (p: Partial<Game>) => { s = { ...s, ...p }; subs.forEach(f => f()); };
